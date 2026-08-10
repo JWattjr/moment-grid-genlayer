@@ -1,0 +1,99 @@
+{
+  "network": "studionet",
+  "chain_id": 61999,
+  "rpc": "https://studio.genlayer.com/api",
+  "contract": "MatchMomentResolver",
+  "contract_address": "0xA4465ECe75f0cf2eF778d4452Cf9352D682a3Be0",
+  "deployment_transaction": "0x484abff4fc9ed70a214fb9ffde2498983d24e609b800a62d1731d9651f7d10f2",
+  "deployment_status": "ACCEPTED",
+  "deployment_execution": "SUCCESS",
+  "workflow": "gltest v0.29 --network studionet (official GenLayer integration tooling)",
+  "submission_deployment": {
+    "account_name": "moment-grid-studionet",
+    "owner_address": "0xdb433ff614bdd1ece21aa97221c3e0a7ecf79c92",
+    "status": "ACCEPTED",
+    "execution": "SUCCESS",
+    "contract_address": "0x3a87Ee9a47f6B1d9d2298166a4a7cA4907780dd9",
+    "deployment_transaction": "0x60024d7204de5c7c43be7982ba5cb1b7f074fb27467d479d86760d2a185e638b",
+    "schema_verified": true,
+    "owner_verified": true,
+    "registrations": {
+      "epl-2023-05-02-arsenal-chelsea-home-first": {
+        "transaction": null,
+        "state_verified": true
+      },
+      "epl-2023-05-02-arsenal-chelsea-penalty-30-60": {
+        "transaction": "0x2e9566402893268fc53edc54b479be40f3a169c8dece53aa6ba4247d770d8ae0",
+        "state_verified": true
+      },
+      "world-cup-2022-12-18-argentina-france-btts": {
+        "transaction": "0x391f1e5c389261a93addfc02e7b50a0c6067a4cc44ff806fc87e32c40cf83e0d",
+        "state_verified": true
+      },
+      "epl-2024-05-04-arsenal-bournemouth-penalty-30-60": {
+        "transaction": "0x1309b0c1501a1f24e1ec376f25744a17f0e5a655deef4ae785182de42f1bfe92",
+        "state_verified": true
+      }
+    },
+    "resolutions": {
+      "epl-2023-05-02-arsenal-chelsea-home-first": {
+        "transaction": "0x647cb97c7363c542972dc4e35b525cbd67cdd8bb8e4dfe55b8626b139f64eee4",
+        "result": "TRUE",
+        "reason_code": "HOME_FIRST",
+        "match_status": "FINAL",
+        "event_minute": 18,
+        "consensus": "MAJORITY_AGREE",
+        "execution": "SUCCESS",
+        "evidence_summary": "Arsenal beat Chelsea 3-1 at Emirates Stadium on 2 May 2023; Arsenal's first goal was scored by Martin Ødegaard at 18', followed by a second at 31' and Gabriel Jesus at 34', with Chelsea's only goal from Noni Madueke at 65'.",
+        "source_references": [
+          "https://www.bbc.co.uk/sport/football/65382202",
+          "https://www.espn.co.uk/football/match/_/gameId/638156/chelsea-arsenal"
+        ],
+        "resolved_at": "2026-08-09T19:06:10.728825Z"
+      },
+      "epl-2023-05-02-arsenal-chelsea-penalty-30-60": {
+        "transaction": "0xec06d204c260028a6889fe2a0e6885f02ee1084673111e78451050aaf8a1eb02",
+        "result": "FALSE",
+        "reason_code": "NO_PENALTY_IN_WINDOW",
+        "match_status": "FINAL",
+        "event_minute": -1,
+        "consensus": "MAJORITY_AGREE",
+        "execution": "SUCCESS",
+        "evidence_summary": "BBC and ESPN both identify Arsenal 3-1 Chelsea on 2 May 2023 as a finished match, with goals at 18', 31', 34' and 65', and neither excerpt shows any penalty awarded between minutes 30 and 59.",
+        "source_references": [
+          "https://www.bbc.co.uk/sport/football/65382202",
+          "https://www.espn.co.uk/football/match/_/gameId/638156/chelsea-arsenal"
+        ],
+        "resolved_at": "2026-08-09T19:07:49.758803Z"
+      }
+    }
+  },
+  "registrations": {
+    "epl-2023-05-02-arsenal-chelsea-home-first": "0x409573d07206dd501a29dbdec1c530f1a9d23aa779f7a94a31b085362330a1e6",
+    "epl-2023-05-02-arsenal-chelsea-penalty-30-60": "0x53d01589692a55529886c8a1740c83e6e6b18a03659cb1ea8e15f9384778d7ec"
+  },
+  "resolutions": {
+    "epl-2023-05-02-arsenal-chelsea-home-first": {
+      "transaction": "0x00ffba0262d252204efdba48e36ff2b76622db09e30a60a5e284b5383e576090",
+      "result": "TRUE",
+      "reason_code": "HOME_FIRST",
+      "event_minute": 18,
+      "resolved_at": "2026-08-09T16:32:35.868495Z"
+    },
+    "epl-2023-05-02-arsenal-chelsea-penalty-30-60": {
+      "transaction": "0x0cb1bcaa55399c0fda279db0c867478c300c8553030a39c93e86f24947d81f76",
+      "result": "FALSE",
+      "reason_code": "NO_PENALTY_IN_WINDOW",
+      "event_minute": -1,
+      "resolved_at": "2026-08-09T17:34:27.354434Z"
+    }
+  },
+  "notes": [
+    "All listed transactions reached validator MAJORITY_AGREE with successful contract execution.",
+    "Studionet remained at ACCEPTED rather than FINALIZED during the integration window; state is readable at ACCEPTED.",
+    "The deployment owner was the integration runner's ephemeral signer. The two recorded demo definitions are immutable and resolution remains permissionless.",
+    "The registered TRUE and FALSE demo criteria are both settled from BBC and ESPN evidence.",
+    "The FALSE receipt emitted GenVM's storage-pickling warning during nondeterministic execution; settlement succeeded, and the durable deployment contains the local closure fix.",
+    "Durable registration transaction 0xee7c6feb8b0805d1da66e87f590f7b0dff08d5fc916dda6b10e69f5cfc4f270f was accepted but rolled back with Malformed prediction because the CLI coerced JSON strings into native calldata objects; no state mutation occurred. Registrations were then sent with GenLayerJS string arguments."
+  ]
+}

@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { EyeOff, Grid3X3, Puzzle, ShieldCheck, Ticket, Trophy } from "lucide-react";
+import { Grid3X3, LockKeyhole, Scale, ShieldCheck, Trophy } from "lucide-react";
 import { PrototypeShell } from "@/components/prototype-shell";
 
 export const metadata: Metadata = {
@@ -9,9 +9,9 @@ export const metadata: Metadata = {
 
 const STEPS = [
   { n: "01", title: "Build nine calls", copy: "Fill every cell. Columns cover 0–30′, 30–60′, and 60–90+′. Each row uses its own rarity pool.", icon: Grid3X3 },
-  { n: "02", title: "Lock privately", copy: "Seal the grid before kickoff. Other players cannot copy your calls while the match unfolds.", icon: EyeOff },
-  { n: "03", title: "Complete lines", copy: "A marked row, column, or diagonal is a line. There are eight possible lines and every line scores equally.", icon: Trophy },
-  { n: "04", title: "Collect fragments", copy: "Each completed line earns one persistent fragment. Four fragments unlock a Megapot ticket purchase.", icon: Puzzle },
+  { n: "02", title: "Lock the grid", copy: "Commit to all nine calls before the replay starts. The locked grid becomes the fixed scoring input.", icon: LockKeyhole },
+  { n: "03", title: "Resolve the evidence", copy: "GenLayer validators evaluate the registered football criterion against public match sources.", icon: Scale },
+  { n: "04", title: "Complete lines", copy: "A marked row, column, or diagonal is a line. There are eight possible lines and every line scores equally.", icon: Trophy },
 ] as const;
 
 export default function RulesPage() {
@@ -32,12 +32,12 @@ export default function RulesPage() {
         ))}
       </section>
 
-      <section className="winning-rule"><Trophy size={18} /><div><span>Pot rule</span><strong>Most completed lines wins.</strong><p>Ties split the pot evenly. No multipliers and no per-line weighting.</p></div></section>
+      <section className="winning-rule"><Trophy size={18} /><div><span>Scoring rule</span><strong>Most completed lines leads.</strong><p>No multipliers and no per-line weighting. The same deterministic rule applies to every grid.</p></div></section>
 
       <section className="chain-native-rule">
-        <header><ShieldCheck size={18} /><div><span>Why onchain</span><strong>Privacy changes the game.</strong></div></header>
-        <p>Inco keeps every grid confidential so nobody can copy a strong player before reveal. Encrypted scoring publishes only the result.</p>
-        <div><span><Puzzle size={14} /> Every line earns a fragment</span><i>→</i><span><Ticket size={14} /> Four buy a Megapot ticket</span></div>
+        <header><ShieldCheck size={18} /><div><span>Why GenLayer</span><strong>Public evidence needs shared judgment.</strong></div></header>
+        <p>Validators compare independent match sources and finalize TRUE, FALSE, or INVALID with a structured evidence record.</p>
+        <div><span><Scale size={14} /> Consensus resolves the moment</span><i>→</i><span><Grid3X3 size={14} /> Pure code scores every grid</span></div>
       </section>
     </PrototypeShell>
   );

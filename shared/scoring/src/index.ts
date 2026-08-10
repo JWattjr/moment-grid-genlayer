@@ -5,4 +5,5 @@ export * from "./moment-ids";
 export * from "./predictions";
 export * from "./replay-clock";
 export * from "./replay-fixture";
+export * from "./genlayer-resolution";
 export * from "./scoring-bridge";

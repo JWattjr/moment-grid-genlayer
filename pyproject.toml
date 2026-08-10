@@ -1,0 +1,12 @@
+[project]
+name = "moment-grid-genlayer"
+version = "0.1.0"
+requires-python = ">=3.12,<3.15"
+dependencies = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests/direct"]
+markers = [
+  "integration: requires a running GenLayer RPC environment",
+  "slow: hosted-network transaction test",
+]

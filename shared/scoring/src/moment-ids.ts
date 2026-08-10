@@ -1,9 +1,8 @@
 import { PREDICTIONS, PredictionId, Tier } from "./predictions";
 
-/// On-chain identity for every prediction. These values are written into
-/// encrypted grids and into round tier pools, so they are deliberately spelled
-/// out rather than derived from array order: reordering `PREDICTION_IDS` must
-/// never silently renumber a moment that a deployed round already refers to.
+/// Stable identity for every prediction. Values are deliberately spelled out
+/// rather than derived from array order so clients and stored demo data do not
+/// silently change meaning when `PREDICTION_IDS` is reordered.
 ///
 /// Layout invariant, asserted in the tests: tier 0 owns 1–9, tier 1 owns 10–18,
 /// tier 2 owns 19–27.
@@ -39,9 +38,8 @@ export const MOMENT_IDS: Record<PredictionId, number> = {
 
 export const GRID_CELLS = 9;
 
-/// The `uint256[3] tierPools` argument `MomentGrid.createRound` expects: one
-/// bitmap per row listing every moment id that row will accept. Derived from
-/// `PREDICTIONS` so it can never drift from the prediction set.
+/// One bitmap per row listing every moment ID accepted by that tier. Derived
+/// from `PREDICTIONS` so the compact representation cannot drift from the UI.
 export const TIER_POOLS: readonly [bigint, bigint, bigint] = (() => {
   const pools: [bigint, bigint, bigint] = [0n, 0n, 0n];
   for (const definition of Object.values(PREDICTIONS)) {
@@ -59,8 +57,8 @@ export function gridToMomentIds(grid: PredictionId[]): number[] {
   return grid.map((prediction) => MOMENT_IDS[prediction]);
 }
 
-/// Packs nine row-major moment ids into the single `euint256` that
-/// `IncoGridStore` stores, one byte per cell, little-endian.
+/// Packs nine row-major moment IDs into a compact bigint, one byte per cell,
+/// little-endian. This is retained as a stable serialization format for tools.
 export function packGrid(grid: PredictionId[]): bigint {
   assertFullGrid(grid);
   return grid.reduce((packed, moment, cell) => packed | (BigInt(MOMENT_IDS[moment]) << BigInt(cell * 8)), 0n);

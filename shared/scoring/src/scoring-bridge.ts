@@ -8,16 +8,14 @@ export type GridScore = {
   completedLines: number;
 };
 
-/// Converts what actually happened in a match into the three per-window moment
-/// bitmaps that `MomentGrid.settleRound` and `IncoGridStore.prepareScore`
-/// consume.
+/// Converts what happened in a match into three compact per-window moment
+/// bitmaps.
 ///
-/// This is the join between the off-chain match feed and on-chain scoring. Each
+/// This is the join between the match feed and deterministic scoring. Each
 /// prediction already declares the column it resolves in, so the predicate set
 /// *is* the mapping — there is no second source of truth to keep in step.
 ///
-/// The result is verified against the Solidity implementations by the parity
-/// vectors in `shared/fixtures/scoring-vectors.json`.
+/// The result is cross-checked against direct predicate scoring in the tests.
 export function eventsToWindowBitmaps(events: MatchEvent[]): [bigint, bigint, bigint] {
   const windows: [bigint, bigint, bigint] = [0n, 0n, 0n];
 
@@ -29,9 +27,8 @@ export function eventsToWindowBitmaps(events: MatchEvent[]): [bigint, bigint, bi
   return windows;
 }
 
-/// Scores a grid directly from match events. Equivalent to what the contracts
-/// compute from `eventsToWindowBitmaps(events)`, and held to that equivalence
-/// by the parity tests.
+/// Scores a grid directly from match events. It is equivalent to the compact
+/// bitmap route and held to that equivalence by exhaustive tests.
 export function scoreGrid(grid: PredictionId[], events: MatchEvent[]): GridScore {
   assertFullGrid(grid);
 
@@ -49,9 +46,8 @@ export function scoreGrid(grid: PredictionId[], events: MatchEvent[]): GridScore
   return { markedMask, completedLines: completedLinesForMask(markedMask) };
 }
 
-/// Scores a grid the way the contracts do: from moment ids and window bitmaps
-/// rather than from predicates. Used by the parity tests to prove both routes
-/// agree, and by the keeper when replaying a settlement.
+/// Scores from moment IDs and window bitmaps rather than predicates. Tests use
+/// this second representation to prove both deterministic routes agree.
 export function scoreMomentIdsAgainstWindows(
   momentIds: number[],
   eventsByWindow: readonly [bigint, bigint, bigint],

@@ -7,12 +7,11 @@
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:prod": "node dist/main",
-    "test": "vitest run",
+    "test": "vitest run src",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint src"
   },
   "dependencies": {
-    "@inco/lightning-js": "^1.0.2",
     "@moment-grid/scoring": "workspace:*",
     "@nestjs/common": "^11.1.6",
     "@nestjs/config": "^4.0.2",
@@ -23,8 +22,7 @@
     "class-validator": "^0.14.2",
     "mongoose": "^8.20.1",
     "reflect-metadata": "^0.2.2",
-    "rxjs": "^7.8.2",
-    "viem": "^2.55.10"
+    "rxjs": "^7.8.2"
   },
   "devDependencies": {
     "@nestjs/cli": "^11.0.10",
@@ -32,7 +30,9 @@
     "@nestjs/testing": "^11.1.6",
     "@types/express": "^5.0.5",
     "@types/node": "^20",
+    "eslint": "^9.39.5",
     "typescript": "^5.9.3",
+    "typescript-eslint": "^8.66.0",
     "vitest": "^4.1.10"
   }
 }

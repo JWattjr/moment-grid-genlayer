@@ -1,0 +1,48 @@
+{
+  "fixture_kind": "DEMO_IDENTITY_AND_CRITERIA_ONLY",
+  "match_id": "epl-manchester-united-liverpool-2024-09-01",
+  "home_team": "Manchester United",
+  "away_team": "Liverpool",
+  "competition": "Premier League",
+  "match_date": "2024-09-01",
+  "venue": "Old Trafford",
+  "source_urls": [
+    "https://www.bbc.co.uk/sport/football/live/cx2npz4yx3gt",
+    "https://www.espn.co.uk/football/match/_/gameId/704305"
+  ],
+  "moments": [
+    {
+      "resolution_id": "epl-2024-09-01-manchester-united-liverpool-home-first",
+      "moment_type": "HOME_TEAM_SCORES_FIRST",
+      "moment_statement": "Home team scores first",
+      "prediction_id": "HOME_SCORES_FIRST",
+      "criteria": {
+        "kind": "FIRST_VALID_GOAL_TEAM",
+        "finality": "FIRST_VALID_GOAL_RECORDED"
+      }
+    },
+    {
+      "resolution_id": "epl-2024-09-01-manchester-united-liverpool-btts",
+      "moment_type": "BOTH_TEAMS_SCORE_FULL_TIME",
+      "moment_statement": "Both teams score by full time",
+      "prediction_id": "BOTH_SCORE_FULL_TIME",
+      "criteria": {
+        "kind": "BOTH_TEAMS_SCORED",
+        "finality": "TRUE_OR_MATCH_FINISHED"
+      }
+    },
+    {
+      "resolution_id": "epl-2024-09-01-manchester-united-liverpool-penalty-30-60",
+      "moment_type": "PENALTY_AWARDED",
+      "moment_statement": "Penalty awarded from minute 30 through 59",
+      "prediction_id": "PENALTY_30_60",
+      "criteria": {
+        "kind": "EVENT_IN_MINUTE_RANGE",
+        "event": "PENALTY_AWARDED",
+        "from_minute": 30,
+        "to_minute": 60,
+        "finality": "EVENT_OR_WINDOW_CLOSED"
+      }
+    }
+  ]
+}

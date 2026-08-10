@@ -8,8 +8,8 @@ import { WalletButton } from "./wallet-button";
 const NAV_ITEMS = [
   { href: "/", label: "Play" },
   { href: "/leaderboard", label: "Ranks" },
-  { href: "/fragments", label: "Fragments" },
   { href: "/rules", label: "Rules" },
+  { href: "/genlayer", label: "GenLayer" },
 ] as const;
 
 export function MomentHeader({ feedbackEnabled, onOpenTutorial, onToggleFeedback }: { feedbackEnabled?: boolean; onOpenTutorial?: () => void; onToggleFeedback?: () => void }) {

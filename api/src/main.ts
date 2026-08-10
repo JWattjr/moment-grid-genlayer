@@ -16,7 +16,6 @@ async function bootstrap(): Promise<void> {
   await app.listen(config.port);
   logger.log(`Moment Grid API listening on ${config.port}`);
   logger.log(`CORS origins: ${config.corsOrigins.join(", ")}`);
-  if (!config.chain) logger.warn("Running without chain access - settlement endpoints will return 503.");
 }
 
 bootstrap().catch((error: unknown) => {

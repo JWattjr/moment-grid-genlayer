@@ -7,20 +7,18 @@ import {
   CircleDot,
   Clock3,
   Eye,
-  EyeOff,
   Flame,
   Grid3X3,
   LockKeyhole,
   RotateCcw,
   Share2,
   ShieldCheck,
-  Sparkles,
-  Ticket,
   Trophy,
   Zap,
 } from "lucide-react";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  applyGenLayerResolutions,
   completedLineIndexes,
   EVENT_LABELS,
   MatchEvent,
@@ -32,9 +30,9 @@ import {
   PredictionId,
   scoreGrid,
 } from "@moment-grid/scoring";
+import { useGenLayerResolution, type GenLayerResolutionPhase } from "@/lib/use-genlayer-resolution";
+import { genLayerResolverConfig, type ResolverRecord } from "@/lib/genlayer-resolver";
 import { useMatchSource } from "@/lib/use-match-source";
-import { ConfidentialSubmitButton } from "./confidential-submit-button";
-import { MegapotClaimButton } from "./megapot-claim-button";
 import { MomentHeader, MomentNav } from "./moment-chrome";
 
 type Screen = "build" | "lock" | "watch" | "reveal" | "reward";
@@ -74,23 +72,28 @@ export function GameShell() {
   const [grid, setGrid] = useState<Grid>(() => Array(9).fill(null));
   const [pickerCell, setPickerCell] = useState<number | null>(null);
   const { snapshot, error: replayError, start: startMatch, reset: resetMatch } = useMatchSource();
+  const genLayer = useGenLayerResolution();
   const [revealed, setRevealed] = useState(false);
-  const [fragments, setFragments] = useState(0);
   const [feedbackEnabled, setFeedbackEnabled] = useState(true);
   const [showTutorial, setShowTutorial] = useState(false);
-  const rewardCommitted = useRef(false);
   const audioContext = useRef<AudioContext | null>(null);
 
   const completeGrid = grid.every((prediction): prediction is PredictionId => prediction !== null);
-  const result = useMemo(
+  const localResult = useMemo(
     () => (completeGrid ? scoreGrid(grid as PredictionId[], snapshot.events) : { markedMask: 0, completedLines: 0 }),
     [completeGrid, grid, snapshot.events],
+  );
+  const result = useMemo(
+    () => applyGenLayerResolutions(
+      grid.filter((prediction): prediction is PredictionId => prediction !== null),
+      localResult,
+      genLayer.record ? [genLayer.record] : [],
+    ),
+    [genLayer.record, grid, localResult],
   );
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
-      const saved = window.localStorage.getItem("moment-grid-fragments");
-      if (saved) setFragments(Number(saved));
       setFeedbackEnabled(window.localStorage.getItem("moment-grid-feedback") !== "off");
       setShowTutorial(!window.localStorage.getItem("moment-grid-tutorial-seen"));
     });
@@ -163,26 +166,19 @@ export function GameShell() {
 
   const startRound = async () => {
     playFeedback("lock");
+    if (!(await genLayer.lock(grid as PredictionId[]))) return;
     await startMatch();
     setScreen("watch");
   };
 
-  const commitReward = useCallback(() => {
-    if (rewardCommitted.current) return;
+  const finishRound = useCallback(() => {
     playFeedback("reward");
-    rewardCommitted.current = true;
-    setFragments((current) => {
-      const next = current + result.completedLines;
-      window.localStorage.setItem("moment-grid-fragments", String(next));
-      return next;
-    });
     setScreen("reward");
-  }, [playFeedback, result.completedLines]);
+  }, [playFeedback]);
 
   const playAgain = async () => {
     playFeedback("tap");
     await resetMatch();
-    rewardCommitted.current = false;
     setGrid(Array(9).fill(null));
     setRevealed(false);
     setScreen("build");
@@ -208,20 +204,23 @@ export function GameShell() {
             />
           )}
           {screen === "lock" && (
-            <LockScreen grid={grid as PredictionId[]} error={replayError} onBack={() => { playFeedback("tap"); setScreen("build"); }} onLock={startRound} />
+            <LockScreen grid={grid as PredictionId[]} error={genLayer.error || replayError} genLayerConfigured={genLayer.configured} phase={genLayer.phase} busy={genLayer.busy} onBack={() => { playFeedback("tap"); setScreen("build"); }} onLock={startRound} />
           )}
-          {screen === "watch" && <WatchScreen snapshot={snapshot} error={replayError} onEvent={handleEventFeedback} onContinue={() => { playFeedback("confirm"); setScreen("reveal"); }} />}
+          {screen === "watch" && <WatchScreen snapshot={snapshot} error={genLayer.error || replayError} phase={genLayer.phase} transactionHash={genLayer.transactionHash} busy={genLayer.busy} onEvent={handleEventFeedback} onContinue={async () => { if (!(await genLayer.resolve(grid as PredictionId[]))) return; playFeedback("confirm"); setScreen("reveal"); }} />}
           {screen === "reveal" && (
             <RevealScreen
               grid={grid as PredictionId[]}
               markedMask={result.markedMask}
               completedLines={result.completedLines}
+              genLayerResolution={genLayer.record}
+              genLayerPhase={genLayer.phase}
+              transactionHash={genLayer.transactionHash}
               revealed={revealed}
               onReveal={() => { playFeedback("reveal"); setRevealed(true); }}
-              onContinue={commitReward}
+              onContinue={finishRound}
             />
           )}
-          {screen === "reward" && <RewardScreen completedLines={result.completedLines} fragments={fragments} onAgain={playAgain} />}
+          {screen === "reward" && <RewardScreen completedLines={result.completedLines} resolution={genLayer.record} onAgain={playAgain} />}
         </div>
 
         <div className="home-indicator" />
@@ -244,8 +243,8 @@ function FirstPlayTutorial({ onAdvance, onClose }: { onAdvance: () => void; onCl
   const [step, setStep] = useState(0);
   const steps = [
     { icon: Grid3X3, tag: "01 · Build", title: "Fill all nine calls.", copy: "Columns are match windows. Rows are rarity tiers. Every cell needs one prediction." },
-    { icon: LockKeyhole, tag: "02 · Lock", title: "Keep the grid secret.", copy: "Seal your calls before kickoff so nobody can copy the crowd or strong players." },
-    { icon: Trophy, tag: "03 · Win", title: "Complete the most lines.", copy: "Rows, columns, and diagonals count equally. Each line also earns one fragment." },
+    { icon: LockKeyhole, tag: "02 · Lock", title: "Commit to your calls.", copy: "Lock the grid before the replay begins so every result is scored against the same picks." },
+    { icon: Trophy, tag: "03 · Resolve", title: "Let consensus settle the moment.", copy: "GenLayer validators evaluate public evidence; deterministic scoring completes your rows, columns, and diagonals." },
   ] as const;
   const current = steps[step];
   const Icon = current.icon;
@@ -284,22 +283,22 @@ function Progress({ screen }: { screen: Screen }) {
 function MatchCard() {
   return (
     <div className="match-card">
-      <div><span className="eyebrow">Recorded cup replay · Emirates</span><strong>ARS <span>vs</span> CHE</strong></div>
-      <div className="match-meta"><span>Judge demo</span><div className="match-window"><Clock3 size={13} /> 2 min / 90′</div></div>
+      <div><span className="eyebrow">Premier League · 2 May 2023 · Emirates</span><strong>ARS <span>vs</span> CHE</strong></div>
+      <div className="match-meta"><span>Studionet evidence demo</span><div className="match-window"><Clock3 size={13} /> 2 min / 90′</div></div>
     </div>
   );
 }
 
-function RewardLoop({ compact = false }: { compact?: boolean }) {
+function ResolutionLoop({ compact = false }: { compact?: boolean }) {
   return (
-    <div className={`reward-loop ${compact ? "is-compact" : ""}`} aria-label="Moment Grid reward loop">
-      <span><b>Play</b><small>secret grid</small></span>
+    <div className={`reward-loop ${compact ? "is-compact" : ""}`} aria-label="Moment Grid resolution loop">
+      <span><b>Pick</b><small>nine calls</small></span>
       <i>→</i>
-      <span><b>Line</b><small>row · column · diagonal</small></span>
+      <span><b>Lock</b><small>fixed grid</small></span>
       <i>→</i>
-      <span><b>+1</b><small>fragment</small></span>
+      <span><b>Resolve</b><small>validator consensus</small></span>
       <i>→</i>
-      <span className="reward-loop-ticket"><b>4 = Ticket</b><small>Megapot draw</small></span>
+      <span className="reward-loop-ticket"><b>Score</b><small>completed lines</small></span>
     </div>
   );
 }
@@ -313,9 +312,9 @@ function BuildScreen({ grid, complete, onPick, onQuickFill, onContinue }: { grid
       </div>
       <p className="lede">Build nine football predictions. Rows control rarity; columns decide when each call resolves.</p>
       <MatchCard />
-      <RewardLoop compact />
+      <ResolutionLoop compact />
       <GridBoard grid={grid} onPick={onPick} />
-      <div className="privacy-note"><ShieldCheck size={16} /><span>Consensus stays hidden until every grid is locked.</span></div>
+      <div className="privacy-note"><ShieldCheck size={16} /><span>GenLayer resolves registered moments from public evidence; line scoring stays deterministic.</span></div>
       <button className="primary-button" disabled={!complete} onClick={onContinue}>
         {complete ? "Review my grid" : `${grid.filter(Boolean).length} / 9 predictions picked`}<ChevronRight size={18} />
       </button>
@@ -351,7 +350,7 @@ function GridBoard({ grid, onPick, markedMask = 0, revealed = false, locked = fa
                 aria-label={`${tier}, ${WINDOW_LABELS[column]}: ${definition?.label ?? "empty"}`}
               >
                 {locked && !revealed ? (
-                  <><EyeOff size={17} /><small>Sealed</small></>
+                  <><LockKeyhole size={17} /><small>Locked</small></>
                 ) : definition ? (
                   <>
                     <span className="prediction-copy"><strong>{definition.label}</strong><small>{definition.deadline}</small></span>
@@ -382,29 +381,29 @@ function ConsensusMeter({ support, tier }: { support: number; tier: number }) {
   );
 }
 
-function LockScreen({ grid, error, onBack, onLock }: { grid: PredictionId[]; error: string; onBack: () => void; onLock: () => void }) {
+function LockScreen({ grid, error, genLayerConfigured, phase, busy, onBack, onLock }: { grid: PredictionId[]; error: string; genLayerConfigured: boolean; phase: GenLayerResolutionPhase; busy: boolean; onBack: () => void; onLock: () => void }) {
   return (
     <div className="screen-stack">
       <button className="back-button" onClick={onBack}><ArrowLeft size={16} /> Edit grid</button>
-      <div><span className="step-label">02 · Lock</span><h1>Seal your calls.</h1></div>
-      <p className="lede">Predictions cannot change after kickoff. Crowd support appears only when every board is sealed.</p>
-      <PrivacyJourney stage="sealed" />
-      <div className="privacy-proof" aria-label="Confidential computation proof">
-        <div><ShieldCheck size={18} /><span><b>Inco Lightning</b><small>1 encrypted handle stores all 9 picks</small></span></div>
-        <div><span><b>Compute</b><small>Lines scored while the grid stays secret</small></span><em>FHE</em></div>
-        <div><span><b>Reveal</b><small>Only hit mask + line count become public</small></span><em>AFTER FT</em></div>
-        <p>Base Sepolia deploy target · plaintext store retained for scoring parity tests</p>
+      <div><span className="step-label">02 · Lock</span><h1>Commit to your calls.</h1></div>
+      <p className="lede">Predictions cannot change after the replay begins. Registered match moments are verified before play.</p>
+      <ResolutionJourney stage="locked" />
+      <div className="privacy-proof" aria-label="GenLayer resolution path">
+        <div><ShieldCheck size={18} /><span><b>Registered criterion</b><small>A precise football moment and evidence policy are stored on Studionet</small></span></div>
+        <div><span><b>Validator consensus</b><small>Independent validators evaluate public match sources</small></span><em>GENLAYER</em></div>
+        <div><span><b>Deterministic score</b><small>The finalized result maps back to the matching grid cell</small></span><em>TRUE / FALSE</em></div>
+        <p>One adjudication record · reusable by any application</p>
       </div>
       <GridBoard grid={grid} locked />
-      <div className="lock-card"><div className="lock-icon"><LockKeyhole size={20} /></div><div><strong>Private until reveal</strong><p>No one can copy popular grids before the match begins.</p></div></div>
-      <ConfidentialSubmitButton grid={grid} />
+      <div className="lock-card"><div className="lock-icon"><LockKeyhole size={20} /></div><div><strong>Grid fixed for this replay</strong><p>Your nine selections are now the immutable scoring input.</p></div></div>
+      {genLayerConfigured && genLayerResolverConfig.moment && grid.includes(genLayerResolverConfig.moment.prediction_id as PredictionId) && <div className="privacy-note"><ShieldCheck size={16} /><span>{genLayerResolverConfig.moment.moment_statement} is pre-registered on {genLayerResolverConfig.network} · {phase === "READY" ? "ready" : "verified at lock"}.</span></div>}
       {error && <p className="error-message">{error}</p>}
-      <button className="primary-button pulse-button" onClick={onLock}>Lock & start replay <LockKeyhole size={17} /></button>
+      <button className="primary-button pulse-button" onClick={onLock} disabled={busy}>{busy ? "Checking GenLayer registration…" : "Lock & start replay"} <LockKeyhole size={17} /></button>
     </div>
   );
 }
 
-function WatchScreen({ snapshot, error, onEvent, onContinue }: { snapshot: MatchSnapshot; error: string; onEvent: (event: MatchEvent) => void; onContinue: () => void }) {
+function WatchScreen({ snapshot, error, phase, transactionHash, busy, onEvent, onContinue }: { snapshot: MatchSnapshot; error: string; phase: GenLayerResolutionPhase; transactionHash: `0x${string}` | null; busy: boolean; onEvent: (event: MatchEvent) => void; onContinue: () => void | Promise<void> }) {
   const [reaction, setReaction] = useState<MatchEvent | null>(null);
   const previousEventCount = useRef(snapshot.events.length);
   const minute = Math.min(90, Math.floor(snapshot.virtualMinute));
@@ -440,10 +439,11 @@ function WatchScreen({ snapshot, error, onEvent, onContinue }: { snapshot: Match
           </div>
         ))}
       </div>
-      <div className="sealed-panel"><div className="sealed-orbit"><LockKeyhole size={26} /><span /></div><strong>Your predictions are sealed</strong><p>Conditions resolve across all 90 minutes. Consensus remains private until reveal.</p></div>
+      <div className="sealed-panel"><div className="sealed-orbit"><LockKeyhole size={26} /><span /></div><strong>Your predictions are locked</strong><p>Conditions resolve across all 90 minutes. The registered criterion is settled after full time.</p></div>
       <div className="feed-section"><div className="section-heading"><span>Match pulse</span><small>{snapshot.events.length} events</small></div><div className="event-feed">{snapshot.events.length === 0 && <div className="empty-event">Waiting for kickoff…</div>}{[...snapshot.events].reverse().slice(0, 4).map((event, index) => <EventRow event={event} newest={index === 0} key={`${event.minute}-${event.eventType}`} />)}</div></div>
+      {transactionHash && <div className="privacy-note"><ShieldCheck size={16} /><span>Studionet transaction {transactionHash.slice(0, 10)}…{transactionHash.slice(-6)} · {phase.toLowerCase()}</span></div>}
       {error && <p className="error-message">{error}</p>}
-      {snapshot.phase === "complete" ? <button className="primary-button" onClick={onContinue}>Full time · reveal <Eye size={18} /></button> : <div className="countdown"><Clock3 size={14} /> {Math.ceil(snapshot.remainingSeconds)}s until reveal</div>}
+      {snapshot.phase === "complete" ? <button className="primary-button" onClick={onContinue} disabled={busy}>{busy ? "Resolving on GenLayer…" : "Full time · resolve & reveal"} <Eye size={18} /></button> : <div className="countdown"><Clock3 size={14} /> {Math.ceil(snapshot.remainingSeconds)}s until reveal</div>}
     </div>
   );
 }
@@ -461,7 +461,7 @@ function EventGlyph({ eventType }: { eventType: MatchEventType }) {
   return <span className="moment-glyph">{glyphs[eventType]}</span>;
 }
 
-function RevealScreen({ grid, markedMask, completedLines, revealed, onReveal, onContinue }: { grid: PredictionId[]; markedMask: number; completedLines: number; revealed: boolean; onReveal: () => void; onContinue: () => void }) {
+function RevealScreen({ grid, markedMask, completedLines, genLayerResolution, genLayerPhase, transactionHash, revealed, onReveal, onContinue }: { grid: PredictionId[]; markedMask: number; completedLines: number; genLayerResolution: ResolverRecord | null; genLayerPhase: GenLayerResolutionPhase; transactionHash: `0x${string}` | null; revealed: boolean; onReveal: () => void; onContinue: () => void }) {
   const lineIndexes = revealed ? completedLineIndexes(markedMask) : [];
   const lineCellOrder = Array<number>(9).fill(-1);
   lineIndexes.forEach((lineIndex, order) => {
@@ -474,15 +474,29 @@ function RevealScreen({ grid, markedMask, completedLines, revealed, onReveal, on
     <div className="screen-stack reveal-screen">
       <div><span className="step-label">04 · Reveal</span><h1>{revealed ? "The crowd called it." : "Ready for the truth?"}</h1></div>
       <p className="lede">Five-dot meters show how strongly the locked crowd backed each prediction.</p>
-      <PrivacyJourney stage={revealed ? "revealed" : "sealed"} />
+      <ResolutionJourney stage={revealed ? "resolved" : "locked"} />
+      {genLayerResolution?.status === "SETTLED" && <GenLayerResolutionProof resolution={genLayerResolution} phase={genLayerPhase} transactionHash={transactionHash} />}
       <div className={`reveal-wrap ${revealed ? "is-revealed" : ""}`}>
         <GridBoard grid={grid} locked={!revealed} revealed={revealed} markedMask={markedMask} showConsensus={revealed} lineCellOrder={lineCellOrder} />
         {revealed && <LineIgnitionOverlay lineIndexes={lineIndexes} />}
-        {!revealed && <div className="reveal-scrim"><EyeOff size={28} /><span>Encrypted grid</span></div>}
+        {!revealed && <div className="reveal-scrim"><LockKeyhole size={28} /><span>Locked grid</span></div>}
       </div>
       {revealed && <div className="consensus-key"><span><i className="is-filled" />○○○○ Contrarian</span><span><i className="is-filled" /><i className="is-filled" /><i className="is-filled" /><i className="is-filled" /><i className="is-filled" /> Crowd favorite</span></div>}
       {revealed && <div className="line-result"><div><Flame size={22} /><span><strong>{completedLines}</strong> {completedLines === 1 ? "line" : "lines"} complete</span></div><small>Equal scoring</small></div>}
-      <button className="primary-button" onClick={revealed ? onContinue : onReveal}>{revealed ? "Claim my fragments" : "Reveal predictions"}{revealed ? <Sparkles size={18} /> : <Eye size={18} />}</button>
+      <button className="primary-button" onClick={revealed ? onContinue : onReveal}>{revealed ? "View round result" : "Reveal predictions"}{revealed ? <Trophy size={18} /> : <Eye size={18} />}</button>
+    </div>
+  );
+}
+
+function GenLayerResolutionProof({ resolution, phase, transactionHash }: { resolution: ResolverRecord; phase: GenLayerResolutionPhase; transactionHash: `0x${string}` | null }) {
+  const outcome = resolution.result === "TRUE" ? "Won" : resolution.result === "FALSE" ? "Lost" : "Unable to resolve";
+  const sources = JSON.parse(resolution.source_references_json) as string[];
+  return (
+    <div className="privacy-proof" aria-label="GenLayer match moment resolution">
+      <div><ShieldCheck size={18} /><span><b>GenLayer consensus · {outcome}</b><small>{resolution.moment_statement}</small></span></div>
+      <div><span><b>{resolution.match_status} · {resolution.event_minute >= 0 ? `${resolution.event_minute}′` : "no event"}</b><small>{resolution.evidence_summary}</small></span><em>{phase}</em></div>
+      <p>{genLayerResolverConfig.network} · {resolution.reason_code} · {resolution.resolved_at}{transactionHash ? ` · ${transactionHash.slice(0, 10)}…${transactionHash.slice(-6)}` : ""}</p>
+      <p>{sources.map((source) => new URL(source).hostname).join(" + ")}</p>
     </div>
   );
 }
@@ -507,35 +521,34 @@ function LineIgnitionOverlay({ lineIndexes }: { lineIndexes: number[] }) {
           );
         })}
       </svg>
-      <div className="line-fragment-cues">
+      <div className="line-result-cues">
         {lineIndexes.map((lineIndex, order) => (
-          <span key={lineIndex} style={{ "--line-order": order } as CSSProperties}>Line complete <b>+1 fragment</b></span>
+          <span key={lineIndex} style={{ "--line-order": order } as CSSProperties}>Line complete <b>verified</b></span>
         ))}
       </div>
     </div>
   );
 }
 
-function PrivacyJourney({ stage }: { stage: "draft" | "sealed" | "revealed" }) {
-  const active = { draft: 0, sealed: 1, revealed: 2 }[stage];
+function ResolutionJourney({ stage }: { stage: "draft" | "locked" | "resolved" }) {
+  const active = { draft: 0, locked: 1, resolved: 2 }[stage];
   const stages = [
-    { label: "Private", icon: EyeOff },
-    { label: "Sealed", icon: LockKeyhole },
-    { label: "Revealed", icon: Eye },
+    { label: "Draft", icon: Grid3X3 },
+    { label: "Locked", icon: LockKeyhole },
+    { label: "Resolved", icon: ShieldCheck },
   ];
   return (
-    <div className="privacy-journey" aria-label={`Grid privacy status: ${stage}`}>
+    <div className="privacy-journey" aria-label={`Grid resolution status: ${stage}`}>
       {stages.map(({ label, icon: Icon }, index) => <div className={`${index < active ? "is-done" : ""} ${index === active ? "is-current" : ""}`} key={label}><span><Icon size={12} /></span><small>{label}</small></div>)}
     </div>
   );
 }
 
-function RewardScreen({ completedLines, fragments, onAgain }: { completedLines: number; fragments: number; onAgain: () => void }) {
-  const ticketReady = fragments >= 4;
+function RewardScreen({ completedLines, resolution, onAgain }: { completedLines: number; resolution: ResolverRecord | null; onAgain: () => void }) {
   const [shareStatus, setShareStatus] = useState("Share result");
 
   const shareResult = async () => {
-    const text = `I completed ${completedLines} ${completedLines === 1 ? "line" : "lines"} in Moment Grid and now have ${fragments}/4 Megapot fragments.`;
+    const text = `I completed ${completedLines} ${completedLines === 1 ? "line" : "lines"} in Moment Grid with a GenLayer-resolved match moment.`;
     try {
       if (navigator.share) {
         await navigator.share({ title: "My Moment Grid result", text, url: window.location.origin });
@@ -552,13 +565,12 @@ function RewardScreen({ completedLines, fragments, onAgain }: { completedLines: 
   return (
     <div className="screen-stack reward-screen">
       <div className="reward-burst"><span /><div><Trophy size={36} /></div></div>
-      <div className="reward-copy"><span className="step-label">05 · Reward</span><h1>{completedLines > 0 ? "Lines secured." : "Next call wins."}</h1><p>{completedLines > 0 ? `You completed ${completedLines} ${completedLines === 1 ? "line" : "lines"} across the match.` : "No complete line this time, but your fragment balance stays safe."}</p></div>
-      <RewardLoop />
-      <div className="fragment-card"><div className="fragment-top"><div><span>Fragment vault</span><strong>{fragments}<small> / 4</small></strong></div><Ticket size={25} /></div><div className="fragment-track">{[0, 1, 2, 3].map((slot) => <i className={slot < Math.min(4, fragments) ? "filled" : ""} key={slot}>{slot < fragments ? <Sparkles size={13} /> : null}</i>)}</div><p>{ticketReady ? "Megapot ticket ready to purchase." : `${4 - fragments} more ${4 - fragments === 1 ? "fragment" : "fragments"} unlocks a Megapot ticket.`}</p><MegapotClaimButton ready={ticketReady} /></div>
-      <div className="payout-card"><span>Round result</span><div><strong>{completedLines > 0 ? "Top score" : "No lines"}</strong><small>{completedLines > 0 ? "Pot shared with tied leaders" : "Zero-line tie rules apply"}</small></div></div>
+      <div className="reward-copy"><span className="step-label">05 · Result</span><h1>{completedLines > 0 ? "Lines secured." : "Next call wins."}</h1><p>{completedLines > 0 ? `You completed ${completedLines} ${completedLines === 1 ? "line" : "lines"} across the match.` : "No complete line this time. Build a new grid and try another set of calls."}</p></div>
+      <ResolutionLoop />
+      <div className="proof-card"><span>GenLayer proof</span><div><strong>{resolution?.status === "SETTLED" ? `${resolution.result} · ${resolution.reason_code}` : "Demo resolution"}</strong><small>{resolution?.status === "SETTLED" ? resolution.evidence_summary : "The reviewer page exposes the full reusable adjudication record."}</small></div></div>
       <button className="share-result-button" type="button" onClick={shareResult}><Share2 size={16} />{shareStatus}</button>
       <button className="primary-button" onClick={onAgain}>Build another grid <RotateCcw size={17} /></button>
-      <p className="replay-footnote">Full-match replay · no wallet required</p>
+      <p className="replay-footnote">Full-match replay · permissionless GenLayer resolution</p>
     </div>
   );
 }

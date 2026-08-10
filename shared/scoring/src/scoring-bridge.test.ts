@@ -37,7 +37,7 @@ function* everyValidGrid(): Generator<PredictionId[]> {
 }
 
 describe("packGrid", () => {
-  it("packs the nine row-major moment ids into the format consumed by IncoGridStore", () => {
+  it("packs nine row-major moment IDs into the stable compact format", () => {
     expect(packGrid(QUICK_GRID)).toBe(0x191613100d0a070401n);
   });
 

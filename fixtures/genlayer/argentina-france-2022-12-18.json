@@ -1,0 +1,48 @@
+{
+  "fixture_kind": "DEMO_IDENTITY_AND_CRITERIA_ONLY",
+  "match_id": "world-cup-argentina-france-2022-12-18",
+  "home_team": "Argentina",
+  "away_team": "France",
+  "competition": "FIFA World Cup",
+  "match_date": "2022-12-18",
+  "venue": "Lusail Stadium",
+  "source_urls": [
+    "https://www.bbc.co.uk/sport/football/63932622",
+    "https://www.espn.com/soccer/match/_/gameId/633850/franceargentina"
+  ],
+  "moments": [
+    {
+      "resolution_id": "world-cup-2022-12-18-argentina-france-home-first",
+      "moment_type": "HOME_TEAM_SCORES_FIRST",
+      "moment_statement": "Home team scores first",
+      "prediction_id": "HOME_SCORES_FIRST",
+      "criteria": {
+        "kind": "FIRST_VALID_GOAL_TEAM",
+        "finality": "FIRST_VALID_GOAL_RECORDED"
+      }
+    },
+    {
+      "resolution_id": "world-cup-2022-12-18-argentina-france-btts",
+      "moment_type": "BOTH_TEAMS_SCORE_FULL_TIME",
+      "moment_statement": "Both teams score by full time",
+      "prediction_id": "BOTH_SCORE_FULL_TIME",
+      "criteria": {
+        "kind": "BOTH_TEAMS_SCORED",
+        "finality": "TRUE_OR_MATCH_FINISHED"
+      }
+    },
+    {
+      "resolution_id": "world-cup-2022-12-18-argentina-france-penalty-0-30",
+      "moment_type": "PENALTY_AWARDED",
+      "moment_statement": "Penalty awarded from minute 0 through 29",
+      "prediction_id": "PENALTY_BEFORE_30",
+      "criteria": {
+        "kind": "EVENT_IN_MINUTE_RANGE",
+        "event": "PENALTY_AWARDED",
+        "from_minute": 0,
+        "to_minute": 30,
+        "finality": "EVENT_OR_WINDOW_CLOSED"
+      }
+    }
+  ]
+}

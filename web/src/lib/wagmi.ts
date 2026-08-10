@@ -1,14 +1,14 @@
 "use client";
 
 import { createConfig, http } from "wagmi";
-import { baseSepolia } from "wagmi/chains";
+import { studionet } from "genlayer-js/chains";
 import { injected } from "wagmi/connectors";
 
 export const wagmiConfig = createConfig({
-  chains: [baseSepolia],
+  chains: [studionet],
   connectors: [injected()],
   transports: {
-    [baseSepolia.id]: http(process.env.NEXT_PUBLIC_BASE_SEPOLIA_RPC_URL),
+    [studionet.id]: http(process.env.NEXT_PUBLIC_GENLAYER_RPC_URL || undefined),
   },
   ssr: true,
 });

@@ -2,7 +2,7 @@ import type { MatchSnapshot } from "@moment-grid/scoring";
 
 /// The API is optional. When `NEXT_PUBLIC_API_URL` is unset the app runs in
 /// guest mode entirely in the browser, which is what keeps the replay playable
-/// with no database, no wallet and no backend process.
+/// with no database and no backend process.
 export const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? "";
 
 export const isApiConfigured = (): boolean => API_BASE_URL.length > 0;
@@ -36,25 +36,4 @@ export const matchApi = {
   status: () => request<MatchSnapshot>("/match"),
   start: (durationSeconds: number) => request<MatchSnapshot>("/match/start", json({ durationSeconds })),
   reset: () => request<MatchSnapshot>("/match/reset", json({})),
-};
-
-export type LeaderboardRow = {
-  rank: number;
-  address: string;
-  completedLines: number;
-  fragments: number;
-};
-
-export const leaderboardApi = {
-  forRound: (roundId: string) => request<LeaderboardRow[]>(`/leaderboard/${roundId}`),
-};
-
-export type PlayerSummary = {
-  address: string;
-  fragments: number;
-  ticketsPurchased: number;
-};
-
-export const playersApi = {
-  summary: (address: string) => request<PlayerSummary>(`/players/${address}`),
 };

@@ -21,10 +21,10 @@ export function WalletButton() {
     <button
       className="wallet-button"
       onClick={() => connectors[0] && connect({ connector: connectors[0] })}
-      aria-label="Connect optional wallet"
+      aria-label="Connect wallet for permissionless GenLayer resolution"
     >
       <Wallet size={13} strokeWidth={2.2} />
-      Guest mode
+      Connect
     </button>
   );
 }
