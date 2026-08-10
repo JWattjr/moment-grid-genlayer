@@ -52,6 +52,7 @@ The submission-grade contract is deployed from the durable encrypted developer a
 
 | Item | Value |
 | --- | --- |
+| Public live demo | [moment-grid-genlayer.vercel.app](https://moment-grid-genlayer.vercel.app) |
 | Network | Studionet · chain 61999 |
 | Durable contract | `0x3a87Ee9a47f6B1d9d2298166a4a7cA4907780dd9` |
 | Durable deployment transaction | `0x60024d7204de5c7c43be7982ba5cb1b7f074fb27467d479d86760d2a185e638b` |
@@ -84,7 +85,7 @@ Responsibility boundaries are described in [`docs/ARCHITECTURE.md`](docs/ARCHITE
 
 ## Reviewer Demo
 
-Run the web app and open [`/genlayer`](http://localhost:3003/genlayer). The route reads actual configured contract state and shows:
+Open the public [`/genlayer`](https://moment-grid-genlayer.vercel.app/genlayer) reviewer route. For local development, run the web app and open [`/genlayer`](http://localhost:3003/genlayer). The route reads actual configured contract state and shows:
 
 - match and immutable criterion;
 - settlement lifecycle and consensus state;

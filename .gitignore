@@ -10,6 +10,7 @@
 **/node_modules/
 web/.next/
 web/.vercel/
+.vercel/
 **/__pycache__/
 *.py[cod]
 .pytest_cache/

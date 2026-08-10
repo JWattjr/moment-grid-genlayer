@@ -1,0 +1,13 @@
+.git/
+.vercel/
+.pnpm-store/
+.pytest_cache/
+.tools/
+.venv/
+**/__pycache__/
+**/node_modules/
+web/.next/
+web/playwright-report/
+web/test-results/
+artifacts/
+/api/

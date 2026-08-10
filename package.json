@@ -13,5 +13,8 @@
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter api start:dev",
     "typecheck": "pnpm -r typecheck"
+  },
+  "devDependencies": {
+    "next": "16.2.12"
   }
 }
