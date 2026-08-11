@@ -25,11 +25,29 @@
     "contract_address": "0xD59BF31968222fEe59F69B5773927EF710cf4d11",
     "deployment_transaction": "0xa9112d9eb67d1d26e1647623a93a21fb7e8b672e824f5a0ec527126cd0b937aa",
     "schema_verified": true,
-    "registered_round_count": 0
+    "registered_round_count": 1
   },
-  "rounds": {},
+  "rounds": {
+    "epl-2023-05-02-arsenal-chelsea-replay-v2": {
+      "match_id": "epl-arsenal-chelsea-2023-05-02",
+      "home_team": "Arsenal",
+      "away_team": "Chelsea",
+      "competition": "Premier League",
+      "match_date": "2023-05-02",
+      "source_urls": [
+        "https://www.bbc.co.uk/sport/football/65382202",
+        "https://www.espn.co.uk/football/match/_/gameId/638156/chelsea-arsenal"
+      ],
+      "lock_at": "2026-08-15T18:00:00Z",
+      "refund_at": "2026-08-18T18:00:00Z",
+      "status": "OPEN",
+      "resolver_status": "PENDING",
+      "resolver_registration_transaction": "0xb1bdcdd0af2d5aee5895b2ee74c59000cb76b2ceb5bfe55b070c90844986fb79",
+      "game_round_creation_transaction": "0x38eb873a6a31b2f344b3115e6110b6bd4940bb4f6bea9b48dcac9e5c7f2f3884"
+    }
+  },
   "notes": [
     "The replacement game deployment contains the 10 GEN minimum, rarity-weighted pools, rolling jackpot, and settled-only protocol revenue.",
-    "No game round has been registered yet. Round registration requires an explicitly approved match, source set, callback target, lock time, and refund time."
+    "The approved Arsenal versus Chelsea historical replay is registered in both contracts and is the active public demo round."
   ]
 }
