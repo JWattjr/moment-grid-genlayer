@@ -15,6 +15,7 @@ if os.name == "nt":
     from gltest.direct.vm import VMContext
 
     _original_cleanup = VMContext._cleanup_after_deactivate
+    _original_refresh = VMContext._refresh_gl_message
 
     def _windows_safe_inject_message_to_fd0(vm):
         from genlayer.py import calldata
@@ -62,5 +63,17 @@ if os.name == "nt":
                 pass
             self._windows_stdin_path = None
 
+    def _windows_refresh_message(self):
+        _original_refresh(self)
+        try:
+            import genlayer.gl as gl
+
+            if gl.message_raw is not None:
+                gl.message_raw["datetime"] = self._datetime
+                gl.message_raw["value"] = self._value
+        except ImportError:
+            pass
+
     loader._inject_message_to_fd0 = _windows_safe_inject_message_to_fd0
     VMContext._cleanup_after_deactivate = _windows_safe_cleanup
+    VMContext._refresh_gl_message = _windows_refresh_message

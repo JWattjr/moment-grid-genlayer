@@ -46,6 +46,16 @@ The owner may register immutable match criteria and approved evidence URLs. Anyo
 
 Standalone architecture, safety properties, and integration guidance are in [`contracts/README.md`](contracts/README.md).
 
+## On-chain Game Economy
+
+The next contract layer is now implemented locally:
+
+- [`contracts/match_round_resolver.py`](contracts/match_round_resolver.py) resolves all 27 supported moments into three validator-agreed window bitmaps;
+- [`contracts/moment_grid_game.py`](contracts/moment_grid_game.py) accepts a payable grid entry, splits it equally across nine cell pools, settles only from the round resolver, scores the packed grid, and supports pull-based GEN claims or timeout refunds;
+- version one is zero-rake, assigns division dust to the last winning stake, and gives the owner no escrow withdrawal path.
+
+The complete trust boundary and payout rules are documented in [`docs/ONCHAIN_GAME.md`](docs/ONCHAIN_GAME.md). These contracts are intended for persistent Testnet Bradbury; the existing Studionet resolver remains the live reviewer proof until the Bradbury wallet is faucet-funded and the new pair is deployed.
+
 ## Live GenLayer Proof
 
 The submission-grade contract is deployed from the durable encrypted developer account and holds representative TRUE/FALSE records from live validator consensus:

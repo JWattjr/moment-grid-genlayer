@@ -68,6 +68,15 @@ The owner is a governance role, not an oracle. A production integrator can place
 
 The resolver contains no Moment Grid scoring, UI, wallet, reward, or payout logic. Another football prediction market can settle an outcome token; a fantasy app can validate a bonus condition; a bounty system can unlock a claim; and a settlement protocol can consume the structured verdict through `get_resolution`. Integrators choose their own economics and decide how to handle retryable INVALID records.
 
+## Full-game contracts
+
+The repository also includes the next on-chain gameplay layer:
+
+- `match_round_resolver.py` extracts final match facts once and derives the stable bitmaps for all 27 grid moments through validator consensus.
+- `moment_grid_game.py` stores packed player grids, holds native GEN, splits every entry across nine pari-mutuel cell pools, reads the resolver result, calculates line scores, and pays claims or refunds.
+
+Neither contract lets the frontend or game owner provide a winning bitmap. See `docs/ONCHAIN_GAME.md` for the economics and lifecycle.
+
 ## Evidence governance and finality
 
 See [`../docs/GENLAYER_SOURCE_POLICY.md`](../docs/GENLAYER_SOURCE_POLICY.md) for supported origins, publisher failure and disagreement behavior, trust assumptions, and the reviewed process for adding sources.
