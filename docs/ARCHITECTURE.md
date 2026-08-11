@@ -1,6 +1,6 @@
 # GenLayer-native architecture
 
-Moment Grid separates real-world adjudication from deterministic game rules. GenLayer interprets public football evidence; ordinary TypeScript maps finalized facts to grid cells and counts completed lines.
+Moment Grid separates real-world adjudication from deterministic game rules. GenLayer interprets public football evidence; deterministic contract code scores entries and distributes native GEN, while shared TypeScript previews the same grid rules in the UI.
 
 ## System boundary
 
@@ -22,25 +22,27 @@ MatchMomentResolver on GenLayer Studionet
       TRUE / FALSE / INVALID
                  |
                  v
-@moment-grid/scoring applies the fact
+MomentGridGame applies the finalized bitmaps
                  |
                  v
-     hit mask + completed lines
+regular pools + horizontal/diagonal jackpot
 ```
 
 ## Responsibilities
 
 ### Intelligent Contract
 
-`contracts/match_moment_resolver.py` owns immutable match definitions, evidence policy, permissionless resolution, finality checks, consensus-safe structured output, and durable resolution history. It does not know about grids, rankings, or user-interface state.
+`contracts/match_round_resolver.py` owns immutable match definitions, evidence policy, permissionless resolution, finality checks, consensus-safe three-window bitmaps, and the authenticated callback to the game. It does not calculate payouts.
+
+`contracts/moment_grid_game.py` owns entries, rarity-weighted pools, jackpot rollover, protocol revenue, batched deterministic scoring, claims, and full timeout refunds. The owner and frontend cannot submit results.
 
 ### Web application
 
-The Next.js app owns the playable replay, the reviewer route, public Studionet reads, and wallet-backed permissionless resolution requests. Read-only use does not require a wallet. The injected-wallet path targets GenLayer Studionet only.
+The Next.js app owns the playable replay, the reviewer route, read-only chain state, and wallet-backed entry, resolution, settlement, and claim transactions. Resolver proof remains on Studionet while the game flow targets persistent Testnet Bradbury. Read-only use does not require a wallet.
 
 ### Scoring package
 
-`@moment-grid/scoring` owns prediction definitions, event predicates, hit masks, and the eight row/column/diagonal combinations. This logic is pure and testable. The GenLayer adapter changes only a cell whose prediction ID matches a settled resolver record.
+`@moment-grid/scoring` owns prediction definitions, event predicates, hit masks, the eight row/column/diagonal combinations, and the matching jackpot preview rule. This logic is pure and testable, but the Intelligent Contract remains authoritative for money.
 
 ### Optional match API
 
@@ -48,13 +50,13 @@ The NestJS service is an optional replay and live-feed adapter. It stores match 
 
 ## Resolution lifecycle
 
-1. The contract owner registers a match identity, criterion, and two or three allowlisted HTTPS evidence URLs.
+1. The contract owner creates a game round and registers its match identity plus two or three allowlisted HTTPS evidence URLs in the resolver.
 2. The definition becomes immutable and enumerable.
 3. Any account may request resolution; the caller cannot provide an answer or replace the sources.
 4. Validators fetch the registered sources and extract the bounded fact model.
 5. The equivalence principle compares stable fields: result, reason code, match status, and decisive minute.
-6. Deterministic contract code stores TRUE or FALSE. INVALID remains retryable.
-7. The application reads the record and applies it to the matching prediction cell.
+6. Deterministic resolver code stores the accepted outcome bitmaps and sends them to the authenticated game callback. INVALID remains retryable.
+7. Anyone processes bounded settlement batches. The game totals qualifying jackpot stake and opens regular and jackpot claims only when scoring is complete.
 
 ## Trust and failure model
 

@@ -45,7 +45,9 @@ export type GenLayerProvider = NonNullable<GenLayerClientConfig["provider"]>;
 export type ResolverWriteResult = { record: ResolverRecord; hash: `0x${string}` | null };
 type ResolutionHistoryResponse = { records?: ResolverRecord[]; technical_error?: string };
 
-const networkSetting = process.env.NEXT_PUBLIC_GENLAYER_NETWORK ?? "studionet";
+const networkSetting = process.env.NEXT_PUBLIC_GENLAYER_RESOLVER_NETWORK
+  ?? process.env.NEXT_PUBLIC_GENLAYER_NETWORK
+  ?? "studionet";
 const networks = {
   localnet: { chain: localnet, connectName: "localnet" as const },
   studionet: { chain: studionet, connectName: "studionet" as const },
@@ -53,7 +55,9 @@ const networks = {
 };
 const selectedNetwork = networks[networkSetting as keyof typeof networks] ?? networks.studionet;
 const contractAddress = process.env.NEXT_PUBLIC_GENLAYER_RESOLVER_ADDRESS ?? "";
-const endpoint = process.env.NEXT_PUBLIC_GENLAYER_RPC_URL?.trim() || undefined;
+const endpoint = process.env.NEXT_PUBLIC_GENLAYER_RESOLVER_RPC_URL?.trim()
+  || process.env.NEXT_PUBLIC_GENLAYER_RPC_URL?.trim()
+  || undefined;
 const resolutionId = process.env.NEXT_PUBLIC_GENLAYER_RESOLUTION_ID
   ?? "epl-2023-05-02-arsenal-chelsea-home-first";
 const configuredMoment = (fixture.moments as FixtureMoment[])

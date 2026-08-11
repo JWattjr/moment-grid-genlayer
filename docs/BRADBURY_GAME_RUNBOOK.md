@@ -19,15 +19,17 @@ genlayer account
 Never put the keystore password or private key in a script, environment file,
 shell history, repository, or chat.
 
-## 2. Validate and deploy both contracts
+## 2. Validate and deploy the contracts
 
 ```powershell
 .\scripts\deploy-onchain-game.ps1 -AccountName moment-grid-studionet
 ```
 
-The game must be deployed before the round resolver because the resolver's
-registered match includes the game callback address. Record both contract
-addresses and both deployment transaction hashes.
+The game must be deployed before a new round resolver because the resolver's
+registered match includes the game callback address. An already deployed
+compatible resolver can be reused. Record contract addresses and deployment
+transaction hashes. Pass `-DeployResolver` only when a new resolver deployment
+is actually required.
 
 ## 3. Register one resolver round
 
@@ -52,8 +54,8 @@ answers.
 
 ## 4. Create the matching game round
 
-The example entry is `0.09 GEN`, represented as `90000000000000000` wei and
-split into nine `0.01 GEN` cell stakes:
+The minimum stake and allocation percentages are contract constants, so round
+creation does not accept an entry-fee argument:
 
 ```powershell
 genlayer write <game-contract-address> create_round --args `
@@ -61,7 +63,6 @@ genlayer write <game-contract-address> create_round --args `
   epl-example-match `
   <round-resolver-address> `
   epl-example-round `
-  90000000000000000 `
   2026-08-20T18:00:00Z `
   2026-08-22T18:00:00Z
 ```
@@ -70,14 +71,18 @@ The lock must be in the future and the refund time must be later than the lock.
 
 ## 5. Exercise the full path
 
-1. A player calls payable `join_round(round_id, packed_grid)` with the exact
-   entry value.
+1. A player calls payable `join_round(round_id, packed_grid)` with at least
+   `10 GEN` (`10000000000000000000` wei). At exactly 10 GEN, the three Common
+   cells receive 0.5 GEN each, the Medium cells 1 GEN each, the Rare cells 1.5
+   GEN each, the jackpot 0.5 GEN, and pending protocol revenue 0.5 GEN.
 2. After the match is final, anyone calls `resolve_round` on the resolver.
 3. When that transaction finalizes, the resolver emits `accept_resolution` to
    the game with `on="finalized"`.
-4. Read `get_entry` for the grid score and `claimable` amount.
-5. The player calls `claim`; verify the receipt execution and GEN balance.
-6. If evidence never settles, call `activate_refunds` after `refund_at`, then
+4. Anyone calls `process_settlement(round_id, max_entries)` until the round
+   reaches `SETTLED`. Use batches no larger than 100 entries.
+5. Read `get_entry` for the score, jackpot qualification, and claimable amount.
+6. The player calls `claim`; verify the receipt execution and GEN balance.
+7. If evidence never settles, call `activate_refunds` after `refund_at`, then
    each player calls `claim` for the full entry.
 
 Always inspect execution output, not only lifecycle status:
@@ -86,4 +91,3 @@ Always inspect execution output, not only lifecycle status:
 genlayer receipt <transaction-hash> --status FINALIZED
 genlayer receipt <transaction-hash> --stdout --stderr
 ```
-

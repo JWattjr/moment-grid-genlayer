@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Grid3X3, LockKeyhole, Scale, ShieldCheck, Trophy } from "lucide-react";
+import { Coins, Grid3X3, LockKeyhole, Scale, ShieldCheck, Trophy } from "lucide-react";
 import { PrototypeShell } from "@/components/prototype-shell";
 
 export const metadata: Metadata = {
@@ -9,9 +9,10 @@ export const metadata: Metadata = {
 
 const STEPS = [
   { n: "01", title: "Build nine calls", copy: "Fill every cell. Columns cover 0–30′, 30–60′, and 60–90+′. Each row uses its own rarity pool.", icon: Grid3X3 },
-  { n: "02", title: "Lock the grid", copy: "Commit to all nine calls before the replay starts. The locked grid becomes the fixed scoring input.", icon: LockKeyhole },
-  { n: "03", title: "Resolve the evidence", copy: "GenLayer validators evaluate the registered football criterion against public match sources.", icon: Scale },
-  { n: "04", title: "Complete lines", copy: "A marked row, column, or diagonal is a line. There are eight possible lines and every line scores equally.", icon: Trophy },
+  { n: "02", title: "Stake and lock", copy: "Stake at least 10 GEN and commit all nine calls before the round locks. Your packed grid is stored on-chain.", icon: LockKeyhole },
+  { n: "03", title: "Back nine pools", copy: "At 10 GEN: 4.5 backs Rare, 3 backs Medium, 1.5 backs Common, 0.5 funds the jackpot, and 0.5 is the protocol fee.", icon: Coins },
+  { n: "04", title: "Resolve the evidence", copy: "GenLayer validators evaluate the registered match sources and finalize all supported moments.", icon: Scale },
+  { n: "05", title: "Win pools and jackpot", copy: "Correct calls share each cell pool. Complete a horizontal row plus a diagonal to share the jackpot.", icon: Trophy },
 ] as const;
 
 export default function RulesPage() {
@@ -32,7 +33,7 @@ export default function RulesPage() {
         ))}
       </section>
 
-      <section className="winning-rule"><Trophy size={18} /><div><span>Scoring rule</span><strong>Most completed lines leads.</strong><p>No multipliers and no per-line weighting. The same deterministic rule applies to every grid.</p></div></section>
+      <section className="winning-rule"><Trophy size={18} /><div><span>Jackpot rule</span><strong>Complete a horizontal row and a diagonal.</strong><p>Qualifiers share the jackpot in proportion to their gross stake. With no qualifier, the jackpot rolls into the next round.</p></div></section>
 
       <section className="chain-native-rule">
         <header><ShieldCheck size={18} /><div><span>Why GenLayer</span><strong>Public evidence needs shared judgment.</strong></div></header>

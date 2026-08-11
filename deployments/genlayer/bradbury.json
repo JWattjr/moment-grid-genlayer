@@ -1,0 +1,35 @@
+{
+  "network": "testnet-bradbury",
+  "chain_id": 4221,
+  "rpc": "https://rpc-bradbury.genlayer.com",
+  "owner_address": "0xdb433ff614bdd1ece21aa97221c3e0a7ecf79c92",
+  "game": {
+    "contract": "MomentGridGame",
+    "contract_address": "0xb0D73f47583617F0f06924f24D47137BEfEa4708",
+    "deployment_transaction": "0x2a52328d63abd80c72487cc8585f1866d413c3461afdff9229d65cf09c8fd22f",
+    "deployment_status": "ACCEPTED",
+    "deployment_execution": "FINISHED_WITH_RETURN",
+    "schema_verified": true,
+    "stake_quote_verified": {
+      "stake_amount_wei": "10000000000000000000",
+      "common_per_cell_wei": "500000000000000000",
+      "medium_per_cell_wei": "1000000000000000000",
+      "rare_per_cell_wei": "1500000000000000000",
+      "jackpot_wei": "500000000000000000",
+      "revenue_wei": "500000000000000000",
+      "pool_total_wei": "9000000000000000000"
+    }
+  },
+  "round_resolver": {
+    "contract": "MatchRoundResolver",
+    "contract_address": "0xD59BF31968222fEe59F69B5773927EF710cf4d11",
+    "deployment_transaction": "0xa9112d9eb67d1d26e1647623a93a21fb7e8b672e824f5a0ec527126cd0b937aa",
+    "schema_verified": true,
+    "registered_round_count": 0
+  },
+  "rounds": {},
+  "notes": [
+    "The replacement game deployment contains the 10 GEN minimum, rarity-weighted pools, rolling jackpot, and settled-only protocol revenue.",
+    "No game round has been registered yet. Round registration requires an explicitly approved match, source set, callback target, lock time, and refund time."
+  ]
+}

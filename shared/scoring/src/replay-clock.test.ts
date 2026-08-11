@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { completedLineIndexes, completedLinesForMask, LINE_MASKS } from "./lines";
+import { completedLineIndexes, completedLinesForMask, LINE_MASKS, qualifiesForJackpot } from "./lines";
 import { MatchEvent, matchScore, windowIndexForMinute } from "./match";
 import { ReplayClock } from "./replay-clock";
 
@@ -78,6 +78,13 @@ describe("full-match phases and line counting", () => {
     expect(completedLinesForMask(0x003)).toBe(0);
     expect(completedLinesForMask(0x041)).toBe(0);
     expect(completedLinesForMask(0x101)).toBe(0);
+  });
+
+  it("requires a horizontal and a diagonal for the jackpot", () => {
+    expect(qualifiesForJackpot(0x007)).toBe(false);
+    expect(qualifiesForJackpot(0x111)).toBe(false);
+    expect(qualifiesForJackpot(0x117)).toBe(true);
+    expect(qualifiesForJackpot(0x1ff)).toBe(true);
   });
 
   it("builds the visible score only from events revealed by the clock", () => {

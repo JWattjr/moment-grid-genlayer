@@ -51,10 +51,16 @@ Standalone architecture, safety properties, and integration guidance are in [`co
 The next contract layer is now implemented locally:
 
 - [`contracts/match_round_resolver.py`](contracts/match_round_resolver.py) resolves all 27 supported moments into three validator-agreed window bitmaps;
-- [`contracts/moment_grid_game.py`](contracts/moment_grid_game.py) accepts a payable grid entry, splits it equally across nine cell pools, settles only from the round resolver, scores the packed grid, and supports pull-based GEN claims or timeout refunds;
-- version one is zero-rake, assigns division dust to the last winning stake, and gives the owner no escrow withdrawal path.
+- [`contracts/moment_grid_game.py`](contracts/moment_grid_game.py) accepts a payable grid entry of at least 10 GEN, applies rarity-weighted nine-pool accounting, settles only from the round resolver, scores the packed grid, and supports pull-based GEN claims or full timeout refunds;
+- 90% of every stake backs the nine regular pools, 5% funds the rolling jackpot, and 5% becomes protocol revenue only after successful settlement;
+- a jackpot grid must complete at least one horizontal row and at least one diagonal. Qualifiers share that round's jackpot pro rata by gross stake; otherwise it rolls into the next round.
 
-The complete trust boundary and payout rules are documented in [`docs/ONCHAIN_GAME.md`](docs/ONCHAIN_GAME.md). These contracts are intended for persistent Testnet Bradbury; the existing Studionet resolver remains the live reviewer proof until the Bradbury wallet is faucet-funded and the new pair is deployed.
+The complete trust boundary and payout rules are documented in [`docs/ONCHAIN_GAME.md`](docs/ONCHAIN_GAME.md). These contracts are intended for persistent Testnet Bradbury; the existing Studionet resolver remains the live reviewer proof.
+
+The weighted-pool game is deployed on Testnet Bradbury at
+`0xb0D73f47583617F0f06924f24D47137BEfEa4708`. Its accepted deployment and
+live 10 GEN allocation check are recorded in
+[`deployments/genlayer/bradbury.json`](deployments/genlayer/bradbury.json).
 
 ## Live GenLayer Proof
 

@@ -73,7 +73,7 @@ The resolver contains no Moment Grid scoring, UI, wallet, reward, or payout logi
 The repository also includes the next on-chain gameplay layer:
 
 - `match_round_resolver.py` extracts final match facts once and derives the stable bitmaps for all 27 grid moments through validator consensus.
-- `moment_grid_game.py` stores packed player grids, holds native GEN, splits every entry across nine pari-mutuel cell pools, reads the resolver result, calculates line scores, and pays claims or refunds.
+- `moment_grid_game.py` stores packed player grids, holds native GEN, allocates every stake across nine rarity-weighted pari-mutuel pools plus a rolling jackpot and protocol fee, authenticates the resolver result, calculates line and jackpot eligibility in bounded batches, and pays claims or full refunds.
 
 Neither contract lets the frontend or game owner provide a winning bitmap. See `docs/ONCHAIN_GAME.md` for the economics and lifecycle.
 
