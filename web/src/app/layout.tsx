@@ -4,8 +4,8 @@ import { headers } from "next/headers";
 import { Providers } from "./providers";
 import "./globals.css";
 
-const title = "Moment Grid — GenLayer football calls";
-const description = "Build a 3×3 football grid and score it with validator-resolved match evidence.";
+const title = "Moment Grid — On-chain football prediction game";
+const description = "Stake testnet GEN across nine football calls, then let GenLayer validators settle public match evidence and open on-chain claims.";
 
 export async function generateMetadata(): Promise<Metadata> {
   const requestHeaders = await headers();

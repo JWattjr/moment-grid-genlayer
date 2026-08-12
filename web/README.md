@@ -1,36 +1,40 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Moment Grid web application
 
-## Getting Started
+The Next.js client is the playable and reviewer-facing interface for Moment Grid. It connects to the V2 game and full-match resolver on Testnet Bradbury, and exposes settled reusable resolver records from Studionet.
 
-First, run the development server:
+## Run locally
+
+From the repository root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+cp web/.env.example web/.env.local
+pnpm --filter @moment-grid/scoring build
+pnpm --filter web dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3003`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Public routes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `/` — build, review, sign, replay, settle, and claim the configured round.
+- `/rounds` — contract-read round lobby with liquidity and controlled-test disclosures.
+- `/entries` — wallet-specific positions and claims.
+- `/leaderboard` — contract-derived standings.
+- `/rules` — grid, pool, and jackpot rules.
+- `/integrity` — trust boundary, recovery behavior, source, and proof links.
+- `/responsible-play` — testnet and real-value launch constraints.
+- `/genlayer` — live settled TRUE/FALSE records from the reusable Studionet resolver.
 
-## Learn More
+The app never accepts a caller-provided result. It waits for transaction finalization, verifies execution success, and restores the packed grid and claim state from the game contract.
 
-To learn more about Next.js, take a look at the following resources:
+## Verification
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+pnpm --filter web lint
+pnpm --filter web typecheck
+pnpm --filter web build
+pnpm --filter web test:e2e
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+The default E2E suite mocks only the read API for deterministic UI-state coverage. Set `E2E_LIVE_GENLAYER=1` for the additional read-only Studionet proof check.

@@ -1161,6 +1161,14 @@ h1 { color: var(--ink); font-size: clamp(31px,8.7vw,39px); line-height: .98; let
   text-decoration: underline;
   text-underline-offset: 2px;
 }
+.proof-links { display: grid; gap: 8px; }
+.proof-links a { display: flex; align-items: center; gap: 9px; padding: 10px; border: 2px solid var(--ink); color: var(--ink); background: #b8d8ff; box-shadow: 3px 3px 0 var(--ink); text-decoration: none; }
+.proof-links a:nth-child(2) { background: var(--gold); }
+.proof-links a > svg { flex: 0 0 auto; }
+.proof-links span { min-width: 0; }
+.proof-links strong, .proof-links small { display: block; }
+.proof-links strong { font-family: "Archivo Black", Impact, sans-serif; font-size: 9px; font-weight: 400; text-transform: uppercase; }
+.proof-links small { margin-top: 3px; color: var(--muted); font-family: "IBM Plex Mono", monospace; font-size: 6.5px; line-height: 1.35; }
 .confirmation-card {
   padding: 11px;
   border: 2px solid var(--ink);

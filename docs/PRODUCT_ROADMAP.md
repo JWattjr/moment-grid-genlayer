@@ -26,11 +26,14 @@ rolling jackpot.
   version `2.0.0` with the expected schemas.
 - [x] Register the 21 August 2026 Arsenal–Coventry fixture with match-specific
   ESPN and TheSportsDB URLs.
-- Run two-wallet end-to-end rehearsal: enter distinct grids, resolve after full
-  time, redispatch if needed, process, claim, and separately prove refund mode.
+- [ ] Complete the armed two-wallet Bradbury rehearsal: both distinct-grid
+  entries are escrowed; after full time, resolve, redispatch if needed, process,
+  claim from both wallets, and record before/after balances and receipts.
 - [x] Record accepted deployment receipts in `deployments/genlayer/`.
 - Record finality once Bradbury advances the accepted receipts beyond status 5.
-- Update Vercel environment variables and visually verify mobile and desktop.
+- [x] Update Vercel environment variables and visually verify the public game,
+  rounds, entries, consensus proof, integrity, and responsible-play routes.
+- [ ] Publish a 90-second reviewer recording after the payout rehearsal closes.
 
 ## Mainnet / real-value blockers
 

@@ -1,73 +1,89 @@
 # GenLayer-native architecture
 
-Moment Grid separates real-world adjudication from deterministic game rules. GenLayer interprets public football evidence; deterministic contract code scores entries and distributes native GEN, while shared TypeScript previews the same grid rules in the UI.
+Moment Grid separates real-world adjudication from deterministic game rules. GenLayer validators interpret public football evidence. Deterministic Intelligent Contract code stores entries, scores accepted facts, and distributes native GEN. Shared TypeScript previews the same grid rules in the UI, but cannot decide money state.
 
 ## System boundary
 
 ```text
-Player builds and locks a 3×3 grid
-                 |
-                 v
-Next.js application commits one payable packed grid
-                 |
-                 v
-MatchMomentResolver on GenLayer Studionet
-        |                       |
-        v                       v
-    BBC Sport                 ESPN
-        \                       /
-         independent validators
-                 |
-                 v
- truth bitmaps + evidence coverage bitmaps
-                 |
-                 v
-MomentGridGame applies the finalized bitmaps
-                 |
-                 v
-regular pools + horizontal/diagonal jackpot
+Player builds a 3×3 grid and reviews the stake split
+                         |
+                         v
+Next.js + wallet sign one payable packed-grid transaction
+                         |
+                         v
+MomentGridGame V2 on persistent Testnet Bradbury
+        |                                    |
+        | escrow + nine pools                | registered callback only
+        v                                    v
+locked entries                      MatchRoundResolver V2
+                                      |             |
+                                      v             v
+                                    ESPN      TheSportsDB
+                                       \       /
+                                independent validators
+                                           |
+                                           v
+                         truth + evidence-coverage bitmaps
+                                           |
+                                           v
+                      authenticated finalized contract message
+                                           |
+                                           v
+                           batched score → claim / refund
 ```
+
+The separate `MatchMomentResolver` deployment on Studionet provides an immediately inspectable reusable TRUE/FALSE/INVALID adjudication proof. It is supplementary evidence, not the payout authority for Bradbury V2.
 
 ## Responsibilities
 
-### Intelligent Contract
+### Full-match resolver
 
-`contracts/match_round_resolver.py` owns immutable match definitions, evidence policy, permissionless resolution, finality checks, consensus-safe three-window bitmaps, and the authenticated callback to the game. It does not calculate payouts.
+[`contracts/match_round_resolver.py`](../contracts/match_round_resolver.py) owns immutable match definitions, source policy, permissionless resolution, post-match evidence windows, consensus-safe truth and evidence-coverage bitmaps, retryable dispatch, and the authenticated callback to the game. It does not calculate payouts.
 
-`contracts/moment_grid_game.py` owns entries, rarity-weighted pools, jackpot rollover, protocol revenue, batched deterministic scoring, claims, and full timeout refunds. The owner and frontend cannot submit results.
+### Game contract
+
+[`contracts/moment_grid_game.py`](../contracts/moment_grid_game.py) owns payable entries, rarity-weighted pools, jackpot rollover, pending protocol revenue, liquidity and grid-diversity gates, bounded deterministic scoring, pull claims, and full timeout refunds. The owner and frontend cannot submit results.
+
+### Reusable single-moment resolver
+
+[`contracts/match_moment_resolver.py`](../contracts/match_moment_resolver.py) registers one constrained criterion and returns settled `TRUE`, `FALSE`, or retryable `INVALID`. Other games can consume it without adopting Moment Grid economics or UI. Its live Studionet records demonstrate the same evidence and validator-consensus boundary on completed matches.
 
 ### Web application
 
-The Next.js app owns the playable replay, the reviewer route, read-only chain state, and wallet-backed entry, resolution, settlement, and claim transactions. Resolver proof remains on Studionet while the game flow targets persistent Testnet Bradbury. Read-only use does not require a wallet.
+The Next.js app owns grid construction, readable stake allocation, wallet and wrong-network recovery, finalized transaction progress, round discovery, entry recovery, claim actions, leaderboard views, integrity disclosures, and the live reviewer route. It reads packed grids, marks, pool state, and claimable balances from contracts. The replay is presentation only.
 
-### Scoring package
+### Shared scoring package
 
-`@moment-grid/scoring` owns prediction definitions, event predicates, hit masks, the eight row/column/diagonal combinations, and the matching jackpot preview rule. This logic is pure and testable, but the Intelligent Contract remains authoritative for money.
+`@moment-grid/scoring` owns prediction definitions, event predicates, compact grid packing, parity vectors, and the eight row/column/diagonal combinations. It previews game behavior and cross-checks contract logic; `MomentGridGame` remains authoritative for money.
 
 ### Optional match API
 
-The NestJS service is an optional replay and live-feed adapter. It stores match events and exposes replay controls; it has no chain keeper, payout engine, or settlement authority. The browser can run its bundled replay without this process.
+The NestJS service is an optional replay/live-feed adapter. It stores normalized events and exposes replay controls. It has no chain keeper, payout engine, or settlement authority; the browser can run the bundled replay without it.
 
-## Resolution lifecycle
+## Round lifecycle
 
-1. The contract owner creates a game round and registers its match identity plus two or three allowlisted HTTPS evidence URLs in the resolver.
-2. The definition becomes immutable and enumerable.
-3. Any account may request resolution; the caller cannot provide an answer or replace the sources.
-4. Validators fetch the registered sources and extract the bounded fact model.
-5. The equivalence principle compares stable fields: result, reason code, match status, and decisive minute.
-6. Deterministic resolver code stores truth and validity bitmaps and sends them to the authenticated game callback. Unavailable, conflicting, or incomplete evidence remains retryable until the deadline; unsupported cells refund.
-7. Anyone processes bounded settlement batches. The game totals qualifying jackpot stake and opens regular and jackpot claims only when scoring is complete.
+1. Governance creates a game round and registers the same immutable match identity, two or three distinct allowlisted evidence URLs, callback address, resolution window, and refund deadline in the resolver.
+2. Before `lock_at`, one wallet may submit one complete packed grid with at least 10 GEN. The game accounts for every wei across nine pools, jackpot, and pending revenue.
+3. At lock, insufficient participants, liquidity, or unique grids make the round permissionlessly refundable.
+4. After full time and `resolve_not_before`, any account may request resolution. The caller supplies no verdict and cannot replace sources.
+5. Leader and validators fetch the registered pages and independently derive bounded final facts. The equivalence principle compares stable decision fields, not prose.
+6. Resolver code stores agreed truth and evidence-coverage bitmaps. Missing coverage remains explicit; material identity/source conflict stays retryable.
+7. After finalization, the resolver sends the bitmaps to the configured game callback. If delivery fails, anyone may redispatch the stored result.
+8. Anyone processes entrants in batches. The game refunds unsupported cell choices, distributes regular pools, totals jackpot qualifiers, rolls or opens the jackpot, and releases protocol revenue only after successful settlement.
+9. Each wallet pulls its own claim. If evidence or scoring misses `refund_at`, anyone may activate full refunds and each entrant reclaims the gross stake.
 
 ## Trust and failure model
 
 - Registration is curated, but registered definitions cannot be overwritten.
-- Resolution is permissionless and answer-free.
-- Two configured sources must be available and materially consistent.
-- Missing identity, disagreement, unavailable evidence, or insufficient finality cannot become a guessed money result.
-- Game rounds enforce future kickoff and evidence windows, liquidity and grid-diversity floors, and permissionless timeout refunds.
-- The replay is non-authoritative. The UI restores the exact packed grid and score from contract state.
-- Settled records cannot be mutated.
-- The LLM does not calculate grid scores.
+- Resolution is permissionless, source-bound, and answer-free.
+- Two distinct allowlisted publishers must be available and materially consistent.
+- Missing evidence is never silently converted to FALSE.
+- The resolver callback is authenticated; owner and frontend cannot inject bitmaps.
+- Round liquidity and unique-grid floors prevent the one-player guaranteed-loss case.
+- Accepted lifecycle status alone is not treated as execution success; writes wait for finalization and verify `FINISHED_WITH_RETURN`.
+- The replay and local previews never produce claimable balances.
+- Pause blocks new exposure but cannot block settlement, claims, refunds, or withdrawals.
+- Owner transfer is two-step. Controlled Test Bot and QA activity are publicly labeled.
 - Private keys and account passwords are never accepted by repository scripts.
 
-The exact source allowlist and disagreement policy are documented in [GENLAYER_SOURCE_POLICY.md](GENLAYER_SOURCE_POLICY.md).
+Exact payout accounting is in [ONCHAIN_GAME.md](ONCHAIN_GAME.md). Source allowlisting, disagreement, and finality policies are in [GENLAYER_SOURCE_POLICY.md](GENLAYER_SOURCE_POLICY.md).

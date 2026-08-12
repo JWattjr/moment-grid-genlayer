@@ -1,27 +1,71 @@
-# Moment Grid demo script (75 seconds)
+# Moment Grid reviewer demo script (90 seconds)
 
-## 0–10 seconds — Product
+Record at 1080p with a fresh browser profile or disconnected wallet. Keep addresses and transaction hashes readable. Do not show private keys, seed phrases, keystore prompts, local fixture controls, or the controlled test bot as an organic player.
 
-Open `/`. Say: “Moment Grid is a 3×3 football prediction game. Each cell is a granular match call in a time window.” Use Quick Fill, then Review and Lock to show that the prediction is fixed before resolution.
+## 0–12 seconds — Product and trust problem
 
-## 10–22 seconds — The hard problem
+Open `https://moment-grid-genlayer.vercel.app`.
 
-Open `/genlayer`. Select the Arsenal–Chelsea first-goal criterion. Say: “A normal contract cannot read two live web reports and decide which valid event happened first. The registered match, criterion, and evidence URLs are immutable; the answer is not in the fixture.”
+Say: “Moment Grid is football bingo with real on-chain pools. Players lock nine granular match calls before kickoff. Those calls cannot be settled safely by one frontend or a final-score feed.”
 
-## 22–38 seconds — Intelligent Contract
+Show the Arsenal–Coventry match card, Bradbury V2 label, and the Pick → Lock → Resolve → Score rail.
 
-Show `contracts/match_moment_resolver.py`, briefly pointing to registration, permissionless resolution, and the validator equivalence comparison. Say: “GenLayer validators independently fetch BBC and ESPN, extract constrained match facts, and agree on stable result fields. Missing or conflicting evidence becomes INVALID, never a guess.”
+## 12–28 seconds — Grid and native GEN stake
 
-## 38–55 seconds — Live proof
+Fill the grid, open Review, and change the stake input.
 
-Return to `/genlayer`. Show `SETTLED TRUE`, `MAJORITY_AGREE`, the evidence summary, source links, and transaction hash. Switch to the penalty-window record and show the live `SETTLED FALSE` result. Expand Technical details to show the contract address and stored fields.
+Say: “One payable transaction stores the packed grid and splits at least 10 testnet GEN across three Common, three Medium, and three Rare pari-mutuel pools, plus a rolling jackpot and pending protocol revenue.”
 
-## 55–70 seconds — Product impact
+Show the exact allocation and confirmation card. Stop before signing unless a fresh test entry has been planned.
 
-Point to “Moment Grid impact.” Say: “The Intelligent Contract adjudicates the real-world fact; pure TypeScript maps that verdict into Won or Lost and recomputes grid lines. The model never calculates rewards.” Show the history list.
+## 28–43 seconds — Contract state, not a replay claim
 
-## 70–75 seconds — Close
+Open `/rounds`.
 
-Say: “Moment Grid now has a real, reusable on-chain football adjudication primitive: public evidence, multi-validator consensus, immutable settlement, and a product consuming the result.”
+Say: “Rounds, liquidity, unique grids, lock times, and jackpot balances are read from the Bradbury game contract. Controlled test liquidity is disclosed. Underfilled rounds void instead of pretending a player won.”
 
-Recording note: use the live reviewer route for evidence and contract state. The deterministic mocked Playwright route is test infrastructure only and must not appear as the live demo.
+Show the active future round and the labeled QA rehearsal. Do not call the QA wallets users.
+
+## 43–59 seconds — Why GenLayer is central
+
+Open `/genlayer` and choose the settled TRUE first-goal record.
+
+Say: “GenLayer validators independently read registered BBC and ESPN reports and agree on constrained decision fields. The caller cannot provide the answer. Missing or conflicting evidence stays retryable instead of becoming FALSE.”
+
+Show `Settled TRUE`, the criterion, evidence summary, sources, and technical details.
+
+## 59–72 seconds — Negative proof and deterministic scoring
+
+Choose the settled FALSE penalty-window record.
+
+Say: “The same contract also proves a negative result. The Intelligent Contract interprets evidence; deterministic code maps the accepted fact into the grid. The model never calculates lines or rewards.”
+
+Show `Settled FALSE`, `NO_PENALTY_IN_WINDOW`, and Moment Grid impact.
+
+## 72–84 seconds — Money-path safety
+
+Open `/integrity`.
+
+Say: “The Bradbury resolver sends finalized truth and evidence-coverage bitmaps to the game. Unsupported calls refund their affected pool stake. Failed liquidity, unresolved evidence, or stalled scoring opens full permissionless refunds. Claims are pull-based.”
+
+Show the immutable entry, independent validator, recovery, source, and proof cards.
+
+## 84–90 seconds — Close
+
+Return to `/rounds` or the home screen.
+
+Say: “Moment Grid turns public football evidence into a complete on-chain game loop: pick, stake, resolve, score, claim—or recover safely.”
+
+End on the live URL and GitHub repository URL.
+
+## Recording acceptance checklist
+
+- The browser address bar shows the public Vercel domain.
+- Bradbury V2 and testnet GEN are stated clearly.
+- At least one live contract-read round is visible.
+- Both a settled TRUE and settled FALSE resolver record appear.
+- Controlled test accounts are disclosed.
+- No local mock or fixture is presented as live evidence.
+- No secret or account unlock prompt appears.
+- Captions or clear narration fit within 90–105 seconds.
+- The final link is public without sign-in before adding it to Portal evidence.

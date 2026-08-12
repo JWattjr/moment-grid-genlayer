@@ -45,7 +45,7 @@ export function MomentNav() {
           </Link>
         );
       })}
-      <div className="trust-links"><Link href="/rules">Rules</Link><Link href="/integrity">Integrity</Link><Link href="/responsible-play">Play safely</Link></div>
+      <div className="trust-links"><Link href="/rules">Rules</Link><Link href="/integrity">Integrity</Link><Link href="/genlayer">Live proof</Link><Link href="/responsible-play">Play safely</Link></div>
     </nav>
   );
 }

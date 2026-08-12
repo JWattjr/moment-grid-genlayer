@@ -1,124 +1,96 @@
 # Moment Grid
 
-**A football prediction game where granular match moments are adjudicated on-chain through GenLayer validator consensus.**
+**A 3×3 football prediction game with native-GEN pools settled from public match evidence by GenLayer validator consensus.**
 
-## The Problem
+[Play the Bradbury testnet demo](https://moment-grid-genlayer.vercel.app) · [Inspect live consensus proof](https://moment-grid-genlayer.vercel.app/genlayer) · [Browse deployed game contract](https://explorer-bradbury.genlayer.com/address/0x1D87C32c1A0D65C083ce322608D284E5767b8408)
 
-Football games can settle final scores from ordinary feeds, but granular moments—who scored first, whether both teams scored, or whether a penalty was awarded inside a minute window—often live in changing, unstructured match reports. A single keeper interpreting those reports becomes a trusted oracle.
+## Reviewer quick path
 
-## Why GenLayer
+1. Open the [live game](https://moment-grid-genlayer.vercel.app) and build nine calls across three time windows and rarity tiers.
+2. Review the stake split before signing. The minimum 10 GEN entry allocates 1.5 GEN to Common pools, 3 GEN to Medium, 4.5 GEN to Rare, 0.5 GEN to the jackpot, and 0.5 GEN to pending protocol revenue.
+3. Open [Rounds](https://moment-grid-genlayer.vercel.app/rounds) to inspect contract-read liquidity, entries, and clearly disclosed controlled test accounts.
+4. Open [Live proof](https://moment-grid-genlayer.vercel.app/genlayer) to inspect settled TRUE and FALSE results produced from BBC and ESPN evidence by the reusable Studionet resolver.
+5. Review [Integrity](https://moment-grid-genlayer.vercel.app/integrity), the [deployment manifest](deployments/genlayer/bradbury.json), and the [full game specification](docs/ONCHAIN_GAME.md).
 
-Moment Grid uses a Python Intelligent Contract, `MatchMomentResolver`, where GenLayer validators independently fetch public match evidence, extract constrained facts, and agree on the stable decision fields. The accepted `TRUE`, `FALSE`, or retryable `INVALID` result is stored on-chain before deterministic grid scoring consumes it.
+No wallet is required to inspect rounds, contract state, consensus records, rules, or the trust model. A funded Bradbury wallet is required only to enter or operate the active testnet round.
 
-GenLayer is the adjudication authority, not a cosmetic AI call. The frontend cannot submit the answer, and the LLM never calculates grid lines.
+## The trust problem
 
-## How Moment Grid Works
+Final-score markets can use ordinary feeds. Moment Grid asks granular questions—whether the home team scored first, whether both teams scored, or whether a penalty, shot, card, corner, substitution, VAR event, or late goal occurred in a particular window. Those facts live in changing, unstructured match reports. Letting a frontend or one keeper interpret them would recreate a trusted oracle.
+
+Moment Grid registers the match and evidence policy before play. GenLayer validators independently read at least two public publishers and agree on bounded truth and evidence-coverage bitmaps. Only finalized resolver state can enter the game contract; the frontend and owner cannot submit a winning result.
+
+## End-to-end on-chain lifecycle
 
 ```text
-Player chooses a 3×3 prediction grid
-                 ↓
-Predictions lock before resolution
-                 ↓
-Public BBC / ESPN match evidence
-                 ↓
-MatchMomentResolver validators independently evaluate facts
-                 ↓
-GenLayer consensus: TRUE / FALSE / INVALID
-                 ↓
-Immutable on-chain resolution
-                 ↓
-Pure TypeScript cell + line scoring
-                 ↓
-Won / Lost / Unable to Resolve
+Player signs one payable packed grid on Bradbury
+                         ↓
+MomentGridGame escrows GEN across nine pools + jackpot
+                         ↓
+Entries lock before kickoff; definitions stay immutable
+                         ↓
+MatchRoundResolver reads registered ESPN / TheSportsDB evidence
+                         ↓
+Independent validators agree on truth + coverage bitmaps
+                         ↓
+Authenticated finalized callback reaches MomentGridGame
+                         ↓
+Permissionless batched scoring opens claims or full refunds
 ```
 
-The existing grid has three time columns (0–30′, 30–60′, 60–90+′) and Common, Medium, and Rare rows. Rows, columns, and diagonals form eight possible completed lines.
+The LLM interprets public evidence; deterministic contract code scores grids, totals jackpot eligibility, and distributes GEN. Missing evidence is not treated as FALSE: unsupported selections refund their affected cell stake, while underfilled, unresolved, or timed-out rounds support full permissionless refunds.
 
-## Intelligent Contract
+## Game economy
 
-[`contracts/match_moment_resolver.py`](contracts/match_moment_resolver.py) is a reusable football-resolution primitive independent of Moment Grid. It supports:
+- The minimum stake is 10 GEN; the testnet UI caps a single entry at 100 GEN.
+- Every stake backs nine transparent pari-mutuel cell pools: 15% Common, 30% Medium, and 45% Rare.
+- The jackpot receives 5%; pending protocol revenue receives 5% and becomes withdrawable only after successful settlement.
+- A player qualifies for the jackpot by completing at least one horizontal row and one diagonal. Qualifiers share it pro rata by gross stake; without a qualifier, it rolls into the next round.
+- Each round requires configured minimum participant, liquidity, and unique-grid gates. Failure opens a full-stake refund path.
 
-- `HOME_TEAM_SCORES_FIRST`
-- `BOTH_TEAMS_SCORE_FULL_TIME`
-- `PENALTY_AWARDED` with an explicit half-open minute range
+Detailed accounting and failure behavior are in [docs/ONCHAIN_GAME.md](docs/ONCHAIN_GAME.md).
 
-The owner may register immutable match criteria and approved evidence URLs. Anyone may request resolution. Validators independently repeat the evidence task, while deterministic code applies finality rules and mutates state only after consensus.
+## Live deployments
 
-Standalone architecture, safety properties, and integration guidance are in [`contracts/README.md`](contracts/README.md).
-
-## On-chain Game Economy
-
-The V2 contract layer is implemented and locally verified:
-
-- [`contracts/match_round_resolver.py`](contracts/match_round_resolver.py) resolves supported moments into validator-agreed truth and evidence-coverage bitmaps;
-- [`contracts/moment_grid_game.py`](contracts/moment_grid_game.py) accepts a payable grid entry of at least 10 GEN, applies rarity-weighted nine-pool accounting, settles only from the round resolver, scores the packed grid, and supports pull-based GEN claims or full timeout refunds;
-- 90% of every stake backs the nine regular pools, 5% funds the rolling jackpot, and 5% becomes protocol revenue only after successful settlement;
-- a jackpot grid must complete at least one horizontal row and at least one diagonal. Qualifiers share that round's jackpot pro rata by gross stake; otherwise it rolls into the next round.
-- future kickoff/evidence windows, liquidity and unique-grid gates, partial evidence refunds, scoring timeout recovery, two-step ownership, indexed entries, and finalized transaction UX are enforced.
-
-The complete trust boundary and payout rules are documented in [`docs/ONCHAIN_GAME.md`](docs/ONCHAIN_GAME.md). These contracts are intended for persistent Testnet Bradbury; the existing Studionet resolver remains the live reviewer proof.
-
-The V2 game and resolver are deployed on Testnet Bradbury at
-`0x1D87C32c1A0D65C083ce322608D284E5767b8408` and
-`0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB`. Both deployments returned
-successful `2.0.0` contracts with validator agreement; their accepted receipts
-and pending-finality status are recorded in
-[`deployments/genlayer/bradbury.json`](deployments/genlayer/bradbury.json).
-The V1 deployment remains in that manifest as read-only history. New entries
-stay disabled until a genuine future fixture is registered in both V2 contracts.
-
-## Live GenLayer Proof
-
-The submission-grade contract is deployed from the durable encrypted developer account and holds representative TRUE/FALSE records from live validator consensus:
+### Testnet Bradbury V2
 
 | Item | Value |
 | --- | --- |
-| Public live demo | [moment-grid-genlayer.vercel.app](https://moment-grid-genlayer.vercel.app) |
+| Network | Testnet Bradbury · chain 4221 |
+| Game | [`0x1D87C32c1A0D65C083ce322608D284E5767b8408`](https://explorer-bradbury.genlayer.com/address/0x1D87C32c1A0D65C083ce322608D284E5767b8408) |
+| Full-match resolver | [`0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB`](https://explorer-bradbury.genlayer.com/address/0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB) |
+| Contract version | `2.0.0` on both deployments |
+| Public round | `epl-2026-08-21-arsenal-coventry-v2` |
+| Public round state | OPEN · 2 entries · 2 unique grids · 20 GEN escrow · liquidity gate met |
+| Controlled QA round | `qa-2026-08-13-motagua-cartagines-v1` · two test wallets · settlement rehearsal in progress |
+
+The public round contains one human-controlled entry and one explicitly labeled fixed-grid Test Bot. The QA round contains two controlled wallets and is never presented as organic liquidity. Exact addresses, inputs, receipts, failed-attempt audit history, and current state are recorded in [deployments/genlayer/bradbury.json](deployments/genlayer/bradbury.json).
+
+### Reusable Studionet resolver proof
+
+| Item | Value |
+| --- | --- |
 | Network | Studionet · chain 61999 |
-| Durable contract | `0x3a87Ee9a47f6B1d9d2298166a4a7cA4907780dd9` |
-| Durable deployment transaction | `0x60024d7204de5c7c43be7982ba5cb1b7f074fb27467d479d86760d2a185e638b` |
-| Verified owner | `0xdB433ff614bDD1ecE21Aa97221C3E0a7ecf79c92` |
+| Contract | `0x3a87Ee9a47f6B1d9d2298166a4a7cA4907780dd9` |
 | TRUE transaction | `0x647cb97c7363c542972dc4e35b525cbd67cdd8bb8e4dfe55b8626b139f64eee4` |
 | FALSE transaction | `0xec06d204c260028a6889fe2a0e6885f02ee1084673111e78451050aaf8a1eb02` |
-| Consensus | `MAJORITY_AGREE`, successful execution |
+| Consensus | `MAJORITY_AGREE` · successful execution |
 | Evidence | BBC Sport + ESPN |
 
-The TRUE record stores `HOME_FIRST / FINAL / 18′`. The FALSE record stores `NO_PENALTY_IN_WINDOW / FINAL`. Exact metadata is in [`deployments/genlayer/studionet.json`](deployments/genlayer/studionet.json).
+[`MatchMomentResolver`](contracts/match_moment_resolver.py) is a reusable, application-neutral contract for one constrained football criterion. Its settled records give reviewers an immediately inspectable consensus proof while the future Bradbury fixture remains open.
 
-The deployment manifest preserves both the durable submission instance and the earlier immutable Phase 2 proof instance.
+## Repository map
 
-## Architecture
+- [`contracts/moment_grid_game.py`](contracts/moment_grid_game.py) — payable entries, nine pools, jackpot, deterministic scoring, claims, and refunds.
+- [`contracts/match_round_resolver.py`](contracts/match_round_resolver.py) — full-match public-evidence resolution and authenticated game callback.
+- [`contracts/match_moment_resolver.py`](contracts/match_moment_resolver.py) — reusable TRUE/FALSE/INVALID football adjudication primitive.
+- [`web/`](web/) — Next.js wallet, transaction lifecycle, rounds, entries, standings, integrity, and reviewer proof.
+- [`shared/scoring/`](shared/scoring/) — pure grid definitions, parity vectors, preview scoring, and line rules.
+- [`tests/`](tests/) — Direct Mode and hosted-network contract coverage.
+- [`docs/`](docs/) — architecture, source policy, runbooks, responsible-play constraints, roadmap, and submission assets.
+- [`deployments/genlayer/`](deployments/genlayer/) — public deployment and transaction records.
 
-```mermaid
-flowchart TD
-    A["Moment Grid UI"] --> B["Locked structured moment"]
-    B --> C["MatchMomentResolver"]
-    D["BBC Sport"] --> C
-    E["ESPN"] --> C
-    C --> F["Independent GenLayer validators"]
-    F --> G["Equivalent structured verdict"]
-    G --> H["On-chain TRUE / FALSE / INVALID"]
-    H --> I["Deterministic scoring adapter"]
-    I --> J["Cell, lines, and player result"]
-```
-
-Responsibility boundaries are described in [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
-
-## Reviewer Demo
-
-Open the public [`/genlayer`](https://moment-grid-genlayer.vercel.app/genlayer) reviewer route. For local development, run the web app and open [`/genlayer`](http://localhost:3003/genlayer). The route reads actual configured contract state and shows:
-
-- match and immutable criterion;
-- settlement lifecycle and consensus state;
-- TRUE, FALSE, or retryable INVALID;
-- evidence summary and source links;
-- transaction identifier;
-- deterministic Moment Grid cell impact;
-- on-chain resolution history.
-
-The normal game experience remains at [`/`](http://localhost:3003/).
-
-## Running Locally
+## Local development
 
 Requirements: Node 20+, pnpm 10, and Python 3.12+.
 
@@ -133,56 +105,44 @@ pnpm --filter @moment-grid/scoring build
 pnpm --filter web dev
 ```
 
-Open `http://localhost:3003`. Settled records and the replay are readable without a wallet. Connect an injected wallet only when triggering a new permissionless resolution.
+Open `http://localhost:3003`. The checked-in environment example points at the public Bradbury V2 game and Studionet resolver proof. Never add a private key, account password, or provider secret to an environment file.
 
-## Running Tests
+## Verification
 
 ```bash
-# Intelligent Contract
+# Intelligent Contracts
 genvm-lint check contracts/match_moment_resolver.py
+genvm-lint check contracts/match_round_resolver.py
+genvm-lint check contracts/moment_grid_game.py
 pytest tests/direct -v
 gltest tests/integration/test_deployed_studionet_resolver.py -v -s --network studionet
 
-# TypeScript application
-pnpm --filter @moment-grid/scoring test
-pnpm --filter api test
-pnpm --filter api typecheck
-pnpm --filter api build
-pnpm --filter web lint
-pnpm --filter web typecheck
-pnpm --filter web build
+# Application
+pnpm test
+pnpm lint
+pnpm typecheck
+pnpm build
 pnpm --filter web test:e2e
 ```
 
-The Playwright suite mocks only the read API for deterministic TRUE/FALSE/INVALID UI coverage. Set `E2E_LIVE_GENLAYER=1` to enable the additional read-only Studionet browser test.
+Current Direct Mode result: **46 passed** across registration, access control, web-evidence failure modes, consensus fields, payable stake accounting, liquidity gates, validity refunds, batched scoring, jackpot sharing/rollover, claims, and timeout recovery. All three Intelligent Contracts pass `genvm-lint check`.
 
-## GenLayer Development
+## Security and launch status
 
-- Fast contract logic uses Direct Mode mocks.
-- Hosted Studionet tests real web access, LLM extraction, leader/validator agreement, and GenVM execution.
-- Network selection is environment-driven and supports localnet, Studionet, and future Bradbury.
-- Deployment accounts are encrypted CLI keystores; passwords and private keys are never committed.
-- Use [`scripts/deploy-genlayer.ps1`](scripts/deploy-genlayer.ps1) from an interactive terminal for a durable-owner deployment.
+- Registered definitions are immutable; resolution is permissionless and answer-free.
+- At least two distinct allowlisted publishers must be available and materially consistent.
+- Caller-supplied verdicts are rejected; only the configured resolver can deliver finalized bitmaps.
+- Ownership transfer is two-step, and pausing cannot block exits, claims, or refunds.
+- Test Bot and controlled QA activity are publicly labeled in both UI and manifests.
+- This is unaudited testnet software. Mainnet or real-value launch remains blocked on independent contract/economic review, governed ownership, monitoring, legal and licensing analysis, age/location controls, self-exclusion and safer-play controls, and an incident/appeals process.
 
-See [`docs/STUDIONET_RUNBOOK.md`](docs/STUDIONET_RUNBOOK.md) and [`docs/GENLAYER_SOURCE_POLICY.md`](docs/GENLAYER_SOURCE_POLICY.md).
+See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/GENLAYER_SOURCE_POLICY.md](docs/GENLAYER_SOURCE_POLICY.md), [docs/PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md), and [docs/RESPONSIBLE_PLAY.md](docs/RESPONSIBLE_PLAY.md).
 
-## Security / Trust Assumptions
+## Submission assets
 
-- The contract owner is trusted only to register match identity, criteria, and allowlisted source URLs. Registered definitions cannot be replaced.
-- Resolution is permissionless; callers cannot supply or alter evidence.
-- V1 source governance is curated, not fully decentralized. BBC, ESPN, and TheSportsDB origins are code-allowlisted.
-- At least two configured sources must be available. Missing identity, source disagreement, or insufficient finality produces retryable `INVALID` rather than a guess.
-- Validators compare result, reason, match status, and decisive minute; evidence-summary prose is audit context.
-- Studionet is a development network. A production deployment still needs durable governance, monitoring, and an explicit appeals policy.
-- The application stores no private keys and accepts no caller-supplied verdicts.
+- [Ready-to-paste Project contribution](docs/GENLAYER_SUBMISSION.md)
+- [Reviewer demo recording script](docs/DEMO_SCRIPT.md)
+- [Bradbury operation and payout rehearsal](docs/BRADBURY_GAME_RUNBOOK.md)
+- [Studionet reusable resolver runbook](docs/STUDIONET_RUNBOOK.md)
 
-## Submission Materials
-
-- [GenLayer contribution drafts](docs/GENLAYER_SUBMISSION.md)
-- [60–90 second demo script](docs/DEMO_SCRIPT.md)
-- [V2 release gates and product roadmap](docs/PRODUCT_ROADMAP.md)
-- [Responsible play and launch constraints](docs/RESPONSIBLE_PLAY.md)
-- [Answer-free demo fixtures](fixtures/genlayer/)
-- [Deployment record](deployments/genlayer/studionet.json)
-
-No private keys, account passwords, or provider API keys belong in this repository.
+Source is public for review. No open-source license has been granted yet; all rights remain reserved until the owner chooses a license.
