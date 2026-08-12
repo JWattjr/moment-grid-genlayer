@@ -12,7 +12,10 @@
     "lint": "pnpm -r lint",
     "dev:web": "pnpm --filter web dev",
     "dev:api": "pnpm --filter api start:dev",
-    "typecheck": "pnpm -r typecheck"
+    "typecheck": "pnpm -r typecheck",
+    "bot:test": "node --test web/scripts/keeper-policy.test.mjs",
+    "bot:player:dry": "node web/scripts/genlayer-bots.mjs player",
+    "bot:keeper:dry": "node web/scripts/genlayer-bots.mjs keeper"
   },
   "devDependencies": {
     "next": "16.2.12"

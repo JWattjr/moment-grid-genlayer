@@ -2,9 +2,10 @@
 
 import { Crown, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
-import { genLayerGameConfig, readGameRound, readRoundEntries, type GameEntryRecord } from "@/lib/genlayer-game";
+import { genLayerGameConfig, isDisclosedTestBot, readGameRound, readRoundEntries, type GameEntryRecord } from "@/lib/genlayer-game";
 
 function short(address?: string) {
+  if (isDisclosedTestBot(address)) return "Test Bot";
   return address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Unknown";
 }
 

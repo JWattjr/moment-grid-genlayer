@@ -1,0 +1,43 @@
+name: Bradbury V2 keeper
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "7,22,37,52 * * * *"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: bradbury-v2-keeper
+  cancel-in-progress: false
+
+jobs:
+  maintain-round:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Read and maintain the active round
+        env:
+          ALLOW_GENLAYER_TESTNET_BOTS: "true"
+          GENLAYER_BOT_PRIVATE_KEY: ${{ secrets.GENLAYER_KEEPER_PRIVATE_KEY }}
+          GENLAYER_BOT_ADDRESS: ${{ vars.GENLAYER_KEEPER_ADDRESS }}
+          GENLAYER_GAME_ADDRESS: "0x1D87C32c1A0D65C083ce322608D284E5767b8408"
+          GENLAYER_ROUND_RESOLVER_ADDRESS: "0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB"
+          GENLAYER_GAME_ROUND_ID: "epl-2026-08-21-arsenal-coventry-v2"
+        shell: bash
+        run: |
+          if [ -z "$GENLAYER_BOT_PRIVATE_KEY" ]; then
+            echo "Keeper is installed but dormant: add GENLAYER_KEEPER_PRIVATE_KEY as an Actions secret."
+            exit 0
+          fi
+          node web/scripts/genlayer-bots.mjs keeper --execute

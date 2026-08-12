@@ -87,6 +87,7 @@ const selectedNetwork = networks[networkSetting as keyof typeof networks] ?? net
 const contractAddress = process.env.NEXT_PUBLIC_GENLAYER_GAME_ADDRESS ?? "";
 const resolverAddress = process.env.NEXT_PUBLIC_GENLAYER_ROUND_RESOLVER_ADDRESS ?? "";
 const roundId = process.env.NEXT_PUBLIC_GENLAYER_GAME_ROUND_ID ?? "";
+const testBotAddress = process.env.NEXT_PUBLIC_GENLAYER_TEST_BOT_ADDRESS ?? "";
 const endpoint = process.env.NEXT_PUBLIC_GENLAYER_GAME_RPC_URL?.trim() || undefined;
 
 export const genLayerGameConfig = {
@@ -98,7 +99,12 @@ export const genLayerGameConfig = {
   chainId: selectedNetwork.chain.id,
   enabled: isAddress(contractAddress) && isAddress(resolverAddress),
   activeRoundEnabled: isAddress(contractAddress) && isAddress(resolverAddress) && Boolean(roundId),
+  testBotAddress: isAddress(testBotAddress) ? testBotAddress.toLowerCase() : "",
 };
+
+export function isDisclosedTestBot(address?: string): boolean {
+  return Boolean(address && genLayerGameConfig.testBotAddress && address.toLowerCase() === genLayerGameConfig.testBotAddress);
+}
 
 function client(account?: `0x${string}`, provider?: GenLayerClientConfig["provider"]) {
   return createClient({

@@ -3,6 +3,7 @@
   "chain_id": 4221,
   "rpc": "https://rpc-bradbury.genlayer.com",
   "owner_address": "0xdb433ff614bdd1ece21aa97221c3e0a7ecf79c92",
+  "disclosed_test_bot_address": "0x2c8eb5db1105a85be66badafed88d10cf393cdd8",
   "v2": {
     "game": {
       "contract": "MomentGridGame",
@@ -47,6 +48,17 @@
         "minimum_unique_grids": 2,
         "status": "OPEN",
         "resolver_status": "PENDING",
+        "participant_count": 1,
+        "unique_grid_count": 1,
+        "total_escrow_wei": "10000000000000000000",
+        "disclosed_test_bot_entry": {
+          "address": "0x2c8eb5db1105a85be66badafed88d10cf393cdd8",
+          "funding_transaction": "0x4b9dea8cdc32aa0cdb2d5bbecb46861d5a389009c06fe8e9a184372cf729a00e",
+          "entry_transaction": "0x98686aa21cec06b999af215171225f38532ad0478023d57d9ea11444417db25c",
+          "stake_wei": "10000000000000000000",
+          "moment_ids": [3, 6, 9, 12, 15, 18, 21, 24, 27],
+          "packed_grid": "499797403077414815235"
+        },
         "resolver_registration_transaction": "0xb04cc69edca894a1c08f0bb1be388da19edb693c84e1647f1716bbc13c466c1f",
         "game_round_creation_transaction": "0xa19e18caf684dd72483c180b753827684a7fb32e9b4c515e496c416d6e06f694"
       }

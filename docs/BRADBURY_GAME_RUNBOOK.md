@@ -99,3 +99,26 @@ Always inspect execution output, not only lifecycle status:
 genlayer receipt <transaction-hash> --status FINALIZED
 genlayer receipt <transaction-hash> --stdout --stderr
 ```
+
+## 6. Disclosed test bot and keeper
+
+The repository contains `web/scripts/genlayer-bots.mjs` with two testnet-only
+modes. Both refuse signed execution unless `ALLOW_GENLAYER_TESTNET_BOTS=true`.
+
+```powershell
+pnpm bot:player:dry
+pnpm bot:keeper:dry
+```
+
+`player --execute` submits one public fixed grid and 10 GEN using a private key
+provided only through `GENLAYER_BOT_PRIVATE_KEY`. The public site identifies the
+configured address as **Test Bot**; it must never be presented as organic
+liquidity. `keeper --execute` reads the contract lifecycle and performs only the
+next permissionless action: resolve/retry, redispatch, process a settlement
+batch, or activate an eligible refund.
+
+`docs/bradbury-keeper-workflow.yml` is a dormant GitHub Actions template for a
+15-minute schedule. Activate it only after granting the repository workflow
+scope and adding `GENLAYER_KEEPER_PRIVATE_KEY` as an Actions secret. Use a
+dedicated, minimally funded testnet account. Never reuse an owner or mainnet
+key, and remove the schedule before any real-value launch.
