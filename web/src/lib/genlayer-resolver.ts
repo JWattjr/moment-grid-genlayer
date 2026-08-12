@@ -187,7 +187,7 @@ export async function requireRegisteredResolution(): Promise<ResolverRecord> {
 export async function resolveConfiguredResolution(
   account: `0x${string}`,
   provider: GenLayerProvider,
-  onStatus?: (phase: "SUBMITTED" | "ACCEPTED", hash: `0x${string}`) => void,
+  onStatus?: (phase: "SUBMITTED" | "FINALIZING" | "FINALIZED", hash: `0x${string}`) => void,
 ): Promise<ResolverWriteResult> {
   const existing = await requireRegisteredResolution();
   if (existing.status === "SETTLED") return { record: existing, hash: null };
@@ -202,16 +202,17 @@ export async function resolveConfiguredResolution(
   });
   onStatus?.("SUBMITTED", hash);
 
-  const accepted = await client().waitForTransactionReceipt({
+  onStatus?.("FINALIZING", hash);
+  const finalized = await client().waitForTransactionReceipt({
     hash,
-    status: TransactionStatus.ACCEPTED,
+    status: TransactionStatus.FINALIZED,
     interval: 3_000,
-    retries: 120,
+    retries: 240,
   });
-  if (accepted.txExecutionResultName !== ExecutionResult.FINISHED_WITH_RETURN) {
-    throw new Error(`GenLayer consensus accepted the transaction, but execution failed (${accepted.txExecutionResultName}).`);
+  if (finalized.txExecutionResultName !== ExecutionResult.FINISHED_WITH_RETURN) {
+    throw new Error(`GenLayer finalized the transaction, but execution failed (${finalized.txExecutionResultName}).`);
   }
-  onStatus?.("ACCEPTED", hash);
+  onStatus?.("FINALIZED", hash);
 
   const record = await requireRegisteredResolution();
   if (record.status !== "SETTLED") {

@@ -1,6 +1,5 @@
 param(
-    [string]$AccountName = $env:GENLAYER_ACCOUNT_NAME,
-    [switch]$DeployResolver
+    [string]$AccountName = $env:GENLAYER_ACCOUNT_NAME
 )
 
 $ErrorActionPreference = "Stop"
@@ -31,12 +30,8 @@ Write-Host "Deploying MomentGridGame first. Enter the keystore password only at 
 & genlayer deploy --contract .\contracts\moment_grid_game.py
 if ($LASTEXITCODE -ne 0) { throw "Game contract deployment failed." }
 
-if ($DeployResolver) {
-    Write-Host "Deploying MatchRoundResolver. Enter the keystore password only at the CLI prompt."
-    & genlayer deploy --contract .\contracts\match_round_resolver.py
-    if ($LASTEXITCODE -ne 0) { throw "Round resolver deployment failed." }
-} else {
-    Write-Host "Keeping the existing compatible MatchRoundResolver. Pass -DeployResolver only when a new resolver is required."
-}
+Write-Host "Deploying the matching V2 MatchRoundResolver. V1 resolver callbacks are not ABI-compatible."
+& genlayer deploy --contract .\contracts\match_round_resolver.py
+if ($LASTEXITCODE -ne 0) { throw "Round resolver deployment failed." }
 
 Write-Host "Record the returned address and transaction hash, then follow docs/BRADBURY_GAME_RUNBOOK.md."

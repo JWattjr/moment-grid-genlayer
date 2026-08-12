@@ -14,6 +14,7 @@ REFUNDING = "REFUNDING"
 CELLS = 9
 OPTIONS_PER_CELL = 3
 MINIMUM_STAKE = 10_000_000_000_000_000_000
+MAXIMUM_STAKE = 100_000_000_000_000_000_000
 MAX_SETTLEMENT_BATCH = 100
 HORIZONTAL_MASKS = [0x007, 0x038, 0x1C0]
 DIAGONAL_MASKS = [0x111, 0x054]
@@ -38,7 +39,13 @@ class GameRound:
     resolver_resolution_id: str
     status: str
     lock_at: str
+    kickoff_at: str
+    resolve_not_before: str
     refund_at: str
+    minimum_participants: u256
+    minimum_total_stake: u256
+    minimum_unique_grids: u256
+    unique_grid_count: u256
     participant_count: u256
     total_escrow: u256
     total_pool_stake: u256
@@ -49,18 +56,24 @@ class GameRound:
     jackpot_claimed_stake: u256
     jackpot_paid: u256
     jackpot_rolled_over: bool
+    jackpot_rollover_destination: str
     revenue_pool: u256
     revenue_released: bool
     settlement_cursor: u256
     window_0_bitmap: u256
     window_1_bitmap: u256
     window_2_bitmap: u256
+    window_0_valid_bitmap: u256
+    window_1_valid_bitmap: u256
+    window_2_valid_bitmap: u256
+    resolution_accepted_at: str
     settled_at: str
 
 
 @allow_storage
 @dataclass
 class GridEntry:
+    player: Address
     packed_grid: u256
     stake_amount: u256
     claimed: bool
@@ -142,6 +155,7 @@ class MomentGridGame(gl.Contract):
     owner: Address
     rounds: TreeMap[str, GameRound]
     round_ids: DynArray[str]
+    round_indexes: TreeMap[str, u256]
     entries: TreeMap[str, GridEntry]
     indexed_entry_keys: TreeMap[str, str]
     cell_pools: TreeMap[str, u256]
@@ -149,12 +163,18 @@ class MomentGridGame(gl.Contract):
     winning_stakes: TreeMap[str, u256]
     claimed_winning_stakes: TreeMap[str, u256]
     paid_cell_pools: TreeMap[str, u256]
+    refundable_stakes: TreeMap[str, u256]
+    seen_grids: TreeMap[str, bool]
     jackpot_rollover: u256
     revenue_withdrawable: u256
     revenue_withdrawn: u256
+    pending_owner: Address
+    paused: bool
 
     def __init__(self):
         self.owner = gl.message.sender_address
+        self.pending_owner = gl.message.sender_address
+        self.paused = False
         self.jackpot_rollover = u256(0)
         self.revenue_withdrawable = u256(0)
         self.revenue_withdrawn = u256(0)
@@ -167,7 +187,12 @@ class MomentGridGame(gl.Contract):
         resolver_address: Address,
         resolver_resolution_id: str,
         lock_at: str,
+        kickoff_at: str,
+        resolve_not_before: str,
         refund_at: str,
+        minimum_participants: u256,
+        minimum_total_stake: u256,
+        minimum_unique_grids: u256,
     ) -> None:
         if gl.message.sender_address != self.owner:
             raise gl.vm.UserError("Only the owner may create rounds")
@@ -175,10 +200,24 @@ class MomentGridGame(gl.Contract):
             raise gl.vm.UserError("Round already exists")
         if any(len(value.strip()) == 0 for value in [round_id, match_id, resolver_resolution_id]):
             raise gl.vm.UserError("Malformed round")
-        if not _valid_timestamp(lock_at) or not _valid_timestamp(refund_at):
+        if self.paused:
+            raise gl.vm.UserError("Contract is paused")
+        if not all(
+            _valid_timestamp(value)
+            for value in [lock_at, kickoff_at, resolve_not_before, refund_at]
+        ):
             raise gl.vm.UserError("Round timestamps must use YYYY-MM-DDTHH:MM:SSZ")
-        if _now_seconds() >= lock_at or lock_at >= refund_at:
+        if not (
+            _now_seconds() < lock_at
+            and lock_at < kickoff_at
+            and kickoff_at <= resolve_not_before
+            and resolve_not_before < refund_at
+        ):
             raise gl.vm.UserError("Round timing is invalid")
+        if minimum_participants < 2 or minimum_total_stake < MINIMUM_STAKE * 2:
+            raise gl.vm.UserError("Round liquidity floor is too low")
+        if minimum_unique_grids < 2 or minimum_unique_grids > minimum_participants:
+            raise gl.vm.UserError("Round grid diversity floor is invalid")
 
         jackpot_seed = self.jackpot_rollover
         self.jackpot_rollover = u256(0)
@@ -189,7 +228,13 @@ class MomentGridGame(gl.Contract):
             resolver_resolution_id=resolver_resolution_id,
             status=OPEN,
             lock_at=lock_at,
+            kickoff_at=kickoff_at,
+            resolve_not_before=resolve_not_before,
             refund_at=refund_at,
+            minimum_participants=minimum_participants,
+            minimum_total_stake=minimum_total_stake,
+            minimum_unique_grids=minimum_unique_grids,
+            unique_grid_count=0,
             participant_count=0,
             total_escrow=0,
             total_pool_stake=0,
@@ -200,14 +245,20 @@ class MomentGridGame(gl.Contract):
             jackpot_claimed_stake=0,
             jackpot_paid=0,
             jackpot_rolled_over=False,
+            jackpot_rollover_destination="",
             revenue_pool=0,
             revenue_released=False,
             settlement_cursor=0,
             window_0_bitmap=0,
             window_1_bitmap=0,
             window_2_bitmap=0,
+            window_0_valid_bitmap=0,
+            window_1_valid_bitmap=0,
+            window_2_valid_bitmap=0,
+            resolution_accepted_at="",
             settled_at="",
         )
+        self.round_indexes[round_id] = u256(len(self.round_ids))
         self.round_ids.append(round_id)
         for cell in range(CELLS):
             cell_key = self._cell_key(round_id, cell)
@@ -215,6 +266,7 @@ class MomentGridGame(gl.Contract):
             self.winning_stakes[cell_key] = u256(0)
             self.claimed_winning_stakes[cell_key] = u256(0)
             self.paid_cell_pools[cell_key] = u256(0)
+            self.refundable_stakes[cell_key] = u256(0)
             first = cell * OPTIONS_PER_CELL + 1
             for moment_id in range(first, first + OPTIONS_PER_CELL):
                 self.option_stakes[self._option_key(round_id, cell, moment_id)] = u256(0)
@@ -223,18 +275,23 @@ class MomentGridGame(gl.Contract):
     def join_round(self, round_id: str, packed_grid: u256) -> None:
         if round_id not in self.rounds:
             raise gl.vm.UserError("Round not found")
+        if self.paused:
+            raise gl.vm.UserError("Contract is paused")
         game_round = self.rounds[round_id]
         if game_round.status != OPEN or _now_seconds() >= game_round.lock_at:
             raise gl.vm.UserError("Round is locked")
         stake_amount = u256(gl.message.value)
         if stake_amount < MINIMUM_STAKE:
             raise gl.vm.UserError("Minimum stake is 10 GEN")
+        if stake_amount > MAXIMUM_STAKE:
+            raise gl.vm.UserError("Maximum testnet stake is 100 GEN")
         _validate_grid(packed_grid)
 
         entry_key = self._entry_key(round_id, gl.message.sender_address)
         if entry_key in self.entries:
             raise gl.vm.UserError("Wallet already entered this round")
         self.entries[entry_key] = GridEntry(
+            player=gl.message.sender_address,
             packed_grid=packed_grid,
             stake_amount=stake_amount,
             claimed=False,
@@ -245,6 +302,10 @@ class MomentGridGame(gl.Contract):
         ] = entry_key
         game_round.participant_count += 1
         game_round.total_escrow += stake_amount
+        grid_key = self._grid_key(round_id, packed_grid)
+        if grid_key not in self.seen_grids:
+            self.seen_grids[grid_key] = True
+            game_round.unique_grid_count += 1
 
         pool_total = _pool_total(stake_amount)
         jackpot = _jackpot_contribution(stake_amount)
@@ -270,34 +331,54 @@ class MomentGridGame(gl.Contract):
         window_0_bitmap: u256,
         window_1_bitmap: u256,
         window_2_bitmap: u256,
+        window_0_valid_bitmap: u256,
+        window_1_valid_bitmap: u256,
+        window_2_valid_bitmap: u256,
     ) -> None:
         if round_id not in self.rounds:
             raise gl.vm.UserError("Round not found")
         game_round = self.rounds[round_id]
         if game_round.status != OPEN:
             raise gl.vm.UserError("Round cannot be settled")
-        if _now_seconds() < game_round.lock_at:
-            raise gl.vm.UserError("Round is not locked yet")
+        if _now_seconds() < game_round.resolve_not_before:
+            raise gl.vm.UserError("Resolution evidence window has not opened")
+        if _now_seconds() >= game_round.refund_at:
+            raise gl.vm.UserError("Resolution deadline has passed")
         if gl.message.sender_address != game_round.resolver_address:
             raise gl.vm.UserError("Only the configured resolver may settle")
         if resolution_id != game_round.resolver_resolution_id:
             raise gl.vm.UserError("Resolver resolution does not match round")
         if match_id != game_round.match_id:
             raise gl.vm.UserError("Resolver match does not match round")
+        if not self._liquidity_ready(game_round):
+            self._open_refunds(game_round)
+            return
 
-        game_round.window_0_bitmap = window_0_bitmap
-        game_round.window_1_bitmap = window_1_bitmap
-        game_round.window_2_bitmap = window_2_bitmap
-        windows = (window_0_bitmap, window_1_bitmap, window_2_bitmap)
+        game_round.window_0_bitmap = u256(int(window_0_bitmap) & int(window_0_valid_bitmap))
+        game_round.window_1_bitmap = u256(int(window_1_bitmap) & int(window_1_valid_bitmap))
+        game_round.window_2_bitmap = u256(int(window_2_bitmap) & int(window_2_valid_bitmap))
+        game_round.window_0_valid_bitmap = window_0_valid_bitmap
+        game_round.window_1_valid_bitmap = window_1_valid_bitmap
+        game_round.window_2_valid_bitmap = window_2_valid_bitmap
+        game_round.resolution_accepted_at = _now_seconds()
+        windows = (
+            game_round.window_0_bitmap,
+            game_round.window_1_bitmap,
+            game_round.window_2_bitmap,
+        )
+        valid_windows = (window_0_valid_bitmap, window_1_valid_bitmap, window_2_valid_bitmap)
         for cell in range(CELLS):
             total_winning_stake = u256(0)
+            total_refundable_stake = u256(0)
             first = cell * OPTIONS_PER_CELL + 1
             for moment_id in range(first, first + OPTIONS_PER_CELL):
+                option_stake = self.option_stakes[self._option_key(round_id, cell, moment_id)]
+                if (int(valid_windows[cell % 3]) & (1 << moment_id)) == 0:
+                    total_refundable_stake += option_stake
                 if (int(windows[cell % 3]) & (1 << moment_id)) != 0:
-                    total_winning_stake += self.option_stakes[
-                        self._option_key(round_id, cell, moment_id)
-                    ]
+                    total_winning_stake += option_stake
             self.winning_stakes[self._cell_key(round_id, cell)] = total_winning_stake
+            self.refundable_stakes[self._cell_key(round_id, cell)] = total_refundable_stake
 
         game_round.status = SCORING
         if game_round.participant_count == 0:
@@ -336,10 +417,12 @@ class MomentGridGame(gl.Contract):
         if round_id not in self.rounds:
             raise gl.vm.UserError("Round not found")
         game_round = self.rounds[round_id]
-        if game_round.status != OPEN:
+        if game_round.status not in [OPEN, SCORING]:
             raise gl.vm.UserError("Refunds cannot be activated")
-        if _now_seconds() < game_round.refund_at:
-            raise gl.vm.UserError("Refund time has not arrived")
+        timed_out = _now_seconds() >= game_round.refund_at
+        underfilled = _now_seconds() >= game_round.lock_at and not self._liquidity_ready(game_round)
+        if not timed_out and not underfilled:
+            raise gl.vm.UserError("Refund conditions have not been met")
         self._open_refunds(game_round)
 
     @gl.public.write
@@ -348,7 +431,27 @@ class MomentGridGame(gl.Contract):
             raise gl.vm.UserError("Only the owner may cancel a round")
         if round_id not in self.rounds or self.rounds[round_id].status != OPEN:
             raise gl.vm.UserError("Round cannot be cancelled")
+        if _now_seconds() >= self.rounds[round_id].lock_at:
+            raise gl.vm.UserError("Locked rounds cannot be owner-cancelled")
         self._open_refunds(self.rounds[round_id])
+
+    @gl.public.write
+    def set_paused(self, paused: bool) -> None:
+        if gl.message.sender_address != self.owner:
+            raise gl.vm.UserError("Only the owner may change pause state")
+        self.paused = paused
+
+    @gl.public.write
+    def propose_owner(self, next_owner: Address) -> None:
+        if gl.message.sender_address != self.owner:
+            raise gl.vm.UserError("Only the owner may propose ownership")
+        self.pending_owner = next_owner
+
+    @gl.public.write
+    def accept_ownership(self) -> None:
+        if gl.message.sender_address != self.pending_owner:
+            raise gl.vm.UserError("Only the pending owner may accept ownership")
+        self.owner = self.pending_owner
 
     @gl.public.write
     def claim(self, round_id: str) -> None:
@@ -419,8 +522,16 @@ class MomentGridGame(gl.Contract):
             "resolver_resolution_id": game_round.resolver_resolution_id,
             "status": game_round.status,
             "minimum_stake": u256(MINIMUM_STAKE),
+            "maximum_stake": u256(MAXIMUM_STAKE),
             "lock_at": game_round.lock_at,
+            "kickoff_at": game_round.kickoff_at,
+            "resolve_not_before": game_round.resolve_not_before,
             "refund_at": game_round.refund_at,
+            "minimum_participants": game_round.minimum_participants,
+            "minimum_total_stake": game_round.minimum_total_stake,
+            "minimum_unique_grids": game_round.minimum_unique_grids,
+            "unique_grid_count": game_round.unique_grid_count,
+            "liquidity_ready": self._liquidity_ready(game_round),
             "participant_count": game_round.participant_count,
             "total_escrow": game_round.total_escrow,
             "total_pool_stake": game_round.total_pool_stake,
@@ -430,11 +541,16 @@ class MomentGridGame(gl.Contract):
             "jackpot_winning_stake": game_round.jackpot_winning_stake,
             "jackpot_paid": game_round.jackpot_paid,
             "jackpot_rolled_over": game_round.jackpot_rolled_over,
+            "jackpot_rollover_destination": game_round.jackpot_rollover_destination,
             "revenue_pool": game_round.revenue_pool,
             "settlement_cursor": game_round.settlement_cursor,
             "window_0_bitmap": game_round.window_0_bitmap,
             "window_1_bitmap": game_round.window_1_bitmap,
             "window_2_bitmap": game_round.window_2_bitmap,
+            "window_0_valid_bitmap": game_round.window_0_valid_bitmap,
+            "window_1_valid_bitmap": game_round.window_1_valid_bitmap,
+            "window_2_valid_bitmap": game_round.window_2_valid_bitmap,
+            "resolution_accepted_at": game_round.resolution_accepted_at,
             "settled_at": game_round.settled_at,
         }
 
@@ -455,6 +571,7 @@ class MomentGridGame(gl.Contract):
             "option_2_moment_id": u256(first + 2),
             "option_2_stake": self.option_stakes[self._option_key(round_id, cell_number, first + 2)],
             "winning_stake": self.winning_stakes[self._cell_key(round_id, cell_number)],
+            "refundable_stake": self.refundable_stakes[self._cell_key(round_id, cell_number)],
             "paid": self.paid_cell_pools[self._cell_key(round_id, cell_number)],
         }
 
@@ -485,6 +602,7 @@ class MomentGridGame(gl.Contract):
             elif game_round.status == REFUNDING and not entry.claimed:
                 claimable = entry.stake_amount
         return {
+            "player": str(entry.player),
             "packed_grid": entry.packed_grid,
             "stake_amount": entry.stake_amount,
             "claimed": entry.claimed,
@@ -496,13 +614,28 @@ class MomentGridGame(gl.Contract):
         }
 
     @gl.public.view
+    def get_entry_by_index(self, round_id: str, index: u256) -> dict:
+        if round_id not in self.rounds or index >= self.rounds[round_id].participant_count:
+            return {}
+        entry_key = self.indexed_entry_keys[self._indexed_entry_key(round_id, int(index))]
+        entry = self.entries[entry_key]
+        return self.get_entry(round_id, entry.player)
+
+    @gl.public.view
     def get_protocol_balances(self) -> dict:
         return {
             "jackpot_rollover": self.jackpot_rollover,
             "revenue_withdrawable": self.revenue_withdrawable,
             "revenue_withdrawn": self.revenue_withdrawn,
             "minimum_stake": u256(MINIMUM_STAKE),
+            "maximum_stake": u256(MAXIMUM_STAKE),
+            "paused": self.paused,
+            "owner": str(self.owner),
         }
+
+    @gl.public.view
+    def get_version(self) -> str:
+        return "2.0.0"
 
     @gl.public.view
     def get_round_count(self) -> u256:
@@ -516,7 +649,20 @@ class MomentGridGame(gl.Contract):
 
     def _finish_settlement(self, game_round: GameRound) -> None:
         if game_round.jackpot_winning_stake == 0:
-            self.jackpot_rollover += game_round.jackpot_pool
+            round_index = int(self.round_indexes[game_round.round_id])
+            if round_index + 1 < len(self.round_ids):
+                next_round_id = self.round_ids[round_index + 1]
+                next_round = self.rounds[next_round_id]
+                if next_round.status == OPEN:
+                    next_round.jackpot_seed += game_round.jackpot_pool
+                    next_round.jackpot_pool += game_round.jackpot_pool
+                    game_round.jackpot_rollover_destination = next_round_id
+                else:
+                    self.jackpot_rollover += game_round.jackpot_pool
+                    game_round.jackpot_rollover_destination = "GLOBAL_NEXT_CREATED"
+            else:
+                self.jackpot_rollover += game_round.jackpot_pool
+                game_round.jackpot_rollover_destination = "GLOBAL_NEXT_CREATED"
             game_round.jackpot_rolled_over = True
         self.revenue_withdrawable += game_round.revenue_pool
         game_round.revenue_released = True
@@ -543,16 +689,25 @@ class MomentGridGame(gl.Contract):
             game_round.window_1_bitmap,
             game_round.window_2_bitmap,
         )
+        valid_windows = (
+            game_round.window_0_valid_bitmap,
+            game_round.window_1_valid_bitmap,
+            game_round.window_2_valid_bitmap,
+        )
         marked_mask, _ = _score_grid(entry.packed_grid, windows)
         for cell in range(CELLS):
             cell_key = self._cell_key(round_id, cell)
             pool = self.cell_pools[cell_key]
+            distributable_pool = pool - self.refundable_stakes[cell_key]
             winners = self.winning_stakes[cell_key]
             entry_cell_stake = _cell_stake(entry.stake_amount, cell)
+            moment_id = _moment_at(entry.packed_grid, cell)
+            if (int(valid_windows[cell % 3]) & (1 << moment_id)) == 0:
+                payout += entry_cell_stake
+                continue
             if winners == 0:
                 payout += entry_cell_stake
                 continue
-            moment_id = _moment_at(entry.packed_grid, cell)
             if (int(windows[cell % 3]) & (1 << moment_id)) == 0:
                 continue
             claimed_stake = self.claimed_winning_stakes[cell_key]
@@ -560,8 +715,8 @@ class MomentGridGame(gl.Contract):
             next_claimed_stake = claimed_stake + entry_cell_stake
             if next_claimed_stake > winners:
                 raise gl.vm.UserError("Winning stake accounting exceeded")
-            cell_payout = pool - paid if next_claimed_stake == winners else (
-                pool * entry_cell_stake // winners
+            cell_payout = distributable_pool - paid if next_claimed_stake == winners else (
+                distributable_pool * entry_cell_stake // winners
             )
             payout += cell_payout
             if apply:
@@ -594,3 +749,13 @@ class MomentGridGame(gl.Contract):
 
     def _option_key(self, round_id: str, cell: int, moment_id: int) -> str:
         return round_id + "|c|" + str(cell) + "|m|" + str(moment_id)
+
+    def _grid_key(self, round_id: str, packed_grid: u256) -> str:
+        return round_id + "|g|" + str(packed_grid)
+
+    def _liquidity_ready(self, game_round: GameRound) -> bool:
+        return (
+            game_round.participant_count >= game_round.minimum_participants
+            and game_round.total_escrow >= game_round.minimum_total_stake
+            and game_round.unique_grid_count >= game_round.minimum_unique_grids
+        )

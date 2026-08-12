@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { MatchEvent } from "./match";
-import { gridToMomentIds, packGrid, TIER_POOLS } from "./moment-ids";
+import { gridToMomentIds, packGrid, TIER_POOLS, unpackGrid } from "./moment-ids";
 import { PREDICTION_POOLS, PredictionId } from "./predictions";
 import { replayMatchEvents } from "./replay-fixture";
 import { eventsToWindowBitmaps, scoreGrid, scoreMomentIdsAgainstWindows } from "./scoring-bridge";
@@ -39,6 +39,7 @@ function* everyValidGrid(): Generator<PredictionId[]> {
 describe("packGrid", () => {
   it("packs nine row-major moment IDs into the stable compact format", () => {
     expect(packGrid(QUICK_GRID)).toBe(0x191613100d0a070401n);
+    expect(unpackGrid(packGrid(QUICK_GRID))).toEqual(QUICK_GRID);
   });
 
   it("refuses an incomplete grid", () => {

@@ -1,6 +1,7 @@
 """Direct-mode coverage for the full-grid MatchRoundResolver."""
 
 import json
+import pytest
 
 
 CONTRACT = "contracts/match_round_resolver.py"
@@ -22,6 +23,8 @@ def register(contract):
         json.dumps([BBC_URL, ESPN_URL], separators=(",", ":")),
         Address("0x0000000000000000000000000000000000000000"),
         "game-round-1",
+        "2026-08-11T13:00:00Z",
+        "2026-08-12T13:00:00Z",
     )
 
 
@@ -50,6 +53,7 @@ def final_facts(**overrides):
         "overturned_goal_minutes": [14],
         "penalty_minutes": [11],
         "went_to_extra_time": True,
+        "supported_moment_ids": list(range(1, 28)),
         "evidence_summary": "Both reports agree on the final timeline.",
     }
     value.update(overrides)
@@ -74,6 +78,7 @@ def test_resolves_all_twenty_seven_moments_into_three_stable_bitmaps(direct_vm, 
     mock_sources(direct_vm)
     mock_facts(direct_vm)
 
+    direct_vm.warp("2026-08-11T13:00:01Z")
     contract.resolve_round(RESOLUTION_ID)
 
     result = contract.get_round_resolution(RESOLUTION_ID)
@@ -83,15 +88,20 @@ def test_resolves_all_twenty_seven_moments_into_three_stable_bitmaps(direct_vm, 
     assert result["window_1_bitmap"] == bitmap(4, 5, 6, 13, 14, 15, 23, 24)
     assert result["window_2_bitmap"] == bitmap(7, 8, 9, 16, 17, 18, 25, 27)
     assert result["attempt_count"] == 1
-    assert result["resolved_at"] == "2026-08-11T12:00:00Z"
+    assert result["resolved_at"] == "2026-08-11T13:00:01Z"
+    assert result["window_0_valid_bitmap"] == bitmap(1, 2, 3, 10, 11, 12, 19, 20, 21)
+    assert result["window_1_valid_bitmap"] == bitmap(4, 5, 6, 13, 14, 15, 22, 23, 24)
+    assert result["window_2_valid_bitmap"] == bitmap(7, 8, 9, 16, 17, 18, 25, 26, 27)
 
 
 def test_live_match_remains_retryable(direct_vm, direct_deploy):
+    direct_vm.warp("2026-08-11T12:00:00Z")
     contract = direct_deploy(CONTRACT)
     register(contract)
     mock_sources(direct_vm)
     mock_facts(direct_vm, match_status="LIVE", evidence_summary="The match is still live.")
 
+    direct_vm.warp("2026-08-11T13:00:01Z")
     contract.resolve_round(RESOLUTION_ID)
 
     result = contract.get_round_resolution(RESOLUTION_ID)
@@ -101,14 +111,59 @@ def test_live_match_remains_retryable(direct_vm, direct_deploy):
 
 
 def test_conflicting_sources_never_settle_money_result(direct_vm, direct_deploy):
+    direct_vm.warp("2026-08-11T12:00:00Z")
     contract = direct_deploy(CONTRACT)
     register(contract)
     mock_sources(direct_vm)
     mock_facts(direct_vm, source_conflict=True, evidence_summary="The reports conflict.")
 
+    direct_vm.warp("2026-08-11T13:00:01Z")
     contract.resolve_round(RESOLUTION_ID)
 
     result = contract.get_round_resolution(RESOLUTION_ID)
     assert result["status"] == "PENDING"
     assert result["reason_code"] == "CONFLICTING_SOURCES"
     assert result["window_0_bitmap"] == 0
+
+
+def test_incomplete_source_coverage_is_committed_as_validity_bitmaps(direct_vm, direct_deploy):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    register(contract)
+    mock_sources(direct_vm)
+    mock_facts(direct_vm, supported_moment_ids=[2, 4, 7])
+    direct_vm.warp("2026-08-11T13:00:01Z")
+    contract.resolve_round(RESOLUTION_ID)
+
+    result = contract.get_round_resolution(RESOLUTION_ID)
+    assert result["window_0_valid_bitmap"] == bitmap(2)
+    assert result["window_1_valid_bitmap"] == bitmap(4)
+    assert result["window_2_valid_bitmap"] == bitmap(7)
+
+
+def test_resolution_is_rejected_before_registered_evidence_window(direct_vm, direct_deploy):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    register(contract)
+    with pytest.raises(Exception, match="evidence window has not opened"):
+        contract.resolve_round(RESOLUTION_ID)
+
+
+def test_registration_requires_distinct_publishers(direct_vm, direct_deploy):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    from genlayer import Address
+    with pytest.raises(Exception, match="distinct publishers"):
+        contract.register_round(
+            RESOLUTION_ID,
+            "epl-demo-match",
+            "Home",
+            "Away",
+            "Premier League",
+            "2024-05-04",
+            json.dumps([BBC_URL, "https://www.bbc.co.uk/sport/football/other"]),
+            Address("0x0000000000000000000000000000000000000000"),
+            "game-round-1",
+            "2026-08-11T13:00:00Z",
+            "2026-08-12T13:00:00Z",
+        )

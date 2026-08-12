@@ -25,15 +25,17 @@ import {
   MatchEventType,
   MatchSnapshot,
   matchScore,
+  MOMENT_IDS,
   PREDICTION_POOLS,
   PREDICTIONS,
   PredictionId,
   qualifiesForJackpot,
   scoreGrid,
+  unpackGrid,
 } from "@moment-grid/scoring";
 import { useGenLayerResolution, type GenLayerResolutionPhase } from "@/lib/use-genlayer-resolution";
 import { genLayerResolverConfig, type ResolverRecord } from "@/lib/genlayer-resolver";
-import { formatGen, MINIMUM_STAKE_GEN } from "@/lib/genlayer-game";
+import { formatGen, MINIMUM_STAKE_GEN, stakeAllocation } from "@/lib/genlayer-game";
 import { useOnchainGame } from "@/lib/use-onchain-game";
 import { useMatchSource } from "@/lib/use-match-source";
 import { MomentHeader, MomentNav } from "./moment-chrome";
@@ -59,25 +61,22 @@ const LINE_PATHS = [
   { cells: [2, 4, 6], d: "M 83.333 16.667 L 16.667 83.333" },
 ] as const;
 
-const QUICK_GRID: PredictionId[] = [
-  "HOME_TWO_SHOTS_30",
-  "CARD_30_60",
-  "TWO_SUBS_AFTER_60",
-  "HOME_SCORES_FIRST",
-  "VAR_30_60",
-  "BOTH_SCORE_FULL_TIME",
-  "PENALTY_BEFORE_30",
-  "PENALTY_30_60",
-  "GOAL_AFTER_80",
-];
+function randomGrid(): PredictionId[] {
+  return Array.from({ length: 9 }, (_, cell) => {
+    const pool = PREDICTION_POOLS[Math.floor(cell / 3)][cell % 3];
+    const random = new Uint32Array(1);
+    window.crypto.getRandomValues(random);
+    return pool[random[0] % pool.length];
+  });
+}
 
-export function GameShell() {
+export function GameShell({ roundId }: { roundId?: string }) {
   const [screen, setScreen] = useState<Screen>("build");
   const [grid, setGrid] = useState<Grid>(() => Array(9).fill(null));
   const [pickerCell, setPickerCell] = useState<number | null>(null);
   const { snapshot, error: replayError, start: startMatch, reset: resetMatch } = useMatchSource();
   const genLayer = useGenLayerResolution();
-  const onchainGame = useOnchainGame();
+  const onchainGame = useOnchainGame(roundId);
   const [stakeInput, setStakeInput] = useState(MINIMUM_STAKE_GEN);
   const [revealed, setRevealed] = useState(false);
   const [feedbackEnabled, setFeedbackEnabled] = useState(true);
@@ -91,13 +90,27 @@ export function GameShell() {
   );
   const result = useMemo(() => (
     onchainGame.configured
-      ? localResult
+      ? onchainGame.entry && ["SCORING", "SETTLED"].includes(onchainGame.round?.status ?? "")
+        ? { markedMask: Number(onchainGame.entry.marked_mask), completedLines: Number(onchainGame.entry.completed_lines) }
+        : { markedMask: 0, completedLines: 0 }
       : applyGenLayerResolutions(
         grid.filter((prediction): prediction is PredictionId => prediction !== null),
         localResult,
         genLayer.record ? [genLayer.record] : [],
       )
-  ), [genLayer.record, grid, localResult, onchainGame.configured]);
+  ), [genLayer.record, grid, localResult, onchainGame.configured, onchainGame.entry, onchainGame.round?.status]);
+
+  useEffect(() => {
+    if (!onchainGame.entry) return;
+    const frame = window.requestAnimationFrame(() => {
+      try {
+        setGrid(unpackGrid(onchainGame.entry!.packed_grid));
+      } catch {
+        // The contract rejects malformed grids; retain the UI draft if an older deployment is queried.
+      }
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [onchainGame.entry]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -181,9 +194,10 @@ export function GameShell() {
   };
 
   const finishRound = useCallback(() => {
+    if (onchainGame.configured && onchainGame.round?.status !== "SETTLED" && onchainGame.round?.status !== "REFUNDING") return;
     playFeedback("reward");
     setScreen("reward");
-  }, [playFeedback]);
+  }, [onchainGame.configured, onchainGame.round?.status, playFeedback]);
 
   const playAgain = async () => {
     playFeedback("tap");
@@ -208,8 +222,9 @@ export function GameShell() {
               grid={grid}
               complete={completeGrid}
               onPick={(cell) => { playFeedback("tap"); setPickerCell(cell); }}
-              onQuickFill={() => { playFeedback("confirm"); setGrid([...QUICK_GRID]); }}
+              onQuickFill={() => { playFeedback("confirm"); setGrid(randomGrid()); }}
               onContinue={() => { playFeedback("confirm"); setScreen("lock"); }}
+              onchainGame={onchainGame}
             />
           )}
           {screen === "lock" && (
@@ -225,6 +240,7 @@ export function GameShell() {
               genLayerPhase={genLayer.phase}
               transactionHash={genLayer.transactionHash}
               revealed={revealed}
+              onchainGame={onchainGame}
               onReveal={() => { playFeedback("reveal"); setRevealed(true); }}
               onContinue={finishRound}
             />
@@ -289,11 +305,12 @@ function Progress({ screen }: { screen: Screen }) {
   );
 }
 
-function MatchCard() {
+function MatchCard({ game }: { game?: OnchainGame }) {
+  const round = game?.round;
   return (
     <div className="match-card">
-      <div><span className="eyebrow">Premier League · 2 May 2023 · Emirates</span><strong>ARS <span>vs</span> CHE</strong></div>
-      <div className="match-meta"><span>Studionet evidence demo</span><div className="match-window"><Clock3 size={13} /> 2 min / 90′</div></div>
+      <div><span className="eyebrow">{round ? `On-chain round · ${round.round_id}` : "Interactive evidence demo"}</span><strong>{round?.match_id ?? "ARS-CHE REPLAY"}</strong></div>
+      <div className="match-meta"><span>{game?.configured ? "Bradbury testnet" : "Local replay"}</span><div className="match-window"><Clock3 size={13} /> {round?.kickoff_at ? new Date(round.kickoff_at).toLocaleString() : "2 min / 90′"}</div></div>
     </div>
   );
 }
@@ -312,26 +329,28 @@ function ResolutionLoop({ compact = false }: { compact?: boolean }) {
   );
 }
 
-function BuildScreen({ grid, complete, onPick, onQuickFill, onContinue }: { grid: Grid; complete: boolean; onPick: (cell: number) => void; onQuickFill: () => void; onContinue: () => void }) {
+function BuildScreen({ grid, complete, onPick, onQuickFill, onContinue, onchainGame }: { grid: Grid; complete: boolean; onPick: (cell: number) => void; onQuickFill: () => void; onContinue: () => void; onchainGame: OnchainGame }) {
+  const committed = Boolean(onchainGame.entry);
   return (
     <div className="screen-stack">
       <div className="title-row">
         <div><span className="step-label">01 · Build</span><h1>Call the match.</h1></div>
-        <button className="text-button" onClick={onQuickFill}><Zap size={13} /> Quick fill</button>
+        {!committed && <button className="text-button" onClick={onQuickFill}><Zap size={13} /> Random fill</button>}
       </div>
       <p className="lede">Build nine football predictions. Rows control rarity; columns decide when each call resolves.</p>
-      <MatchCard />
+      <MatchCard game={onchainGame} />
       <ResolutionLoop compact />
-      <GridBoard grid={grid} onPick={onPick} />
+      <GridBoard grid={grid} onPick={committed ? undefined : onPick} pools={onchainGame.pools} />
+      {committed && <OnchainRoundPanel game={onchainGame} />}
       <div className="privacy-note"><ShieldCheck size={16} /><span>GenLayer resolves registered moments from public evidence; line scoring stays deterministic.</span></div>
       <button className="primary-button" disabled={!complete} onClick={onContinue}>
-        {complete ? "Review my grid" : `${grid.filter(Boolean).length} / 9 predictions picked`}<ChevronRight size={18} />
+        {committed ? "Open my committed grid" : complete ? "Review my grid" : `${grid.filter(Boolean).length} / 9 predictions picked`}<ChevronRight size={18} />
       </button>
     </div>
   );
 }
 
-function GridBoard({ grid, onPick, markedMask = 0, revealed = false, locked = false, showConsensus = false, lineCellOrder }: { grid: Grid; onPick?: (cell: number) => void; markedMask?: number; revealed?: boolean; locked?: boolean; showConsensus?: boolean; lineCellOrder?: number[] }) {
+function GridBoard({ grid, onPick, markedMask = 0, revealed = false, locked = false, showConsensus = false, lineCellOrder, pools = [] }: { grid: Grid; onPick?: (cell: number) => void; markedMask?: number; revealed?: boolean; locked?: boolean; showConsensus?: boolean; lineCellOrder?: number[]; pools?: OnchainGame["pools"] }) {
   return (
     <div className={`grid-board prediction-board ${locked ? "is-locked" : ""}`}>
       <div className="grid-corner" />
@@ -363,7 +382,7 @@ function GridBoard({ grid, onPick, markedMask = 0, revealed = false, locked = fa
                 ) : definition ? (
                   <>
                     <span className="prediction-copy"><strong>{definition.label}</strong><small>{definition.deadline}</small></span>
-                    {showConsensus && <ConsensusMeter support={definition.support} tier={row} />}
+                    {showConsensus && <ConsensusMeter support={marketSupport(pools, cell, MOMENT_IDS[predictionId!])} tier={row} />}
                     {revealed && <span className="result-dot">{hit ? <Check size={10} /> : "×"}</span>}
                   </>
                 ) : (
@@ -379,7 +398,7 @@ function GridBoard({ grid, onPick, markedMask = 0, revealed = false, locked = fa
 }
 
 function ConsensusMeter({ support, tier }: { support: number; tier: number }) {
-  const filledDots = Math.max(1, Math.min(5, Math.ceil(support / 20)));
+  const filledDots = Math.max(0, Math.min(5, Math.ceil(support / 20)));
   return (
     <span className={`consensus-meter meter-tier-${tier}`} aria-label={`${support}% crowd support`}>
       <span className="consensus-dots" aria-hidden="true">
@@ -391,6 +410,17 @@ function ConsensusMeter({ support, tier }: { support: number; tier: number }) {
 }
 
 function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame, stakeInput, onStakeInput, onBack, onLock }: { grid: PredictionId[]; error: string; genLayerConfigured: boolean; phase: GenLayerResolutionPhase; busy: boolean; onchainGame: OnchainGame; stakeInput: string; onStakeInput: (value: string) => void; onBack: () => void; onLock: () => void }) {
+  const [confirmed, setConfirmed] = useState(false);
+  let allocation: ReturnType<typeof stakeAllocation> | null = null;
+  try { allocation = stakeAllocation(stakeInput); } catch { allocation = null; }
+  const v2Ready = !onchainGame.configured || Boolean(onchainGame.round?.kickoff_at && onchainGame.round.resolve_not_before);
+  const requestLock = () => {
+    if (onchainGame.configured && !onchainGame.entry && !confirmed) {
+      setConfirmed(true);
+      return;
+    }
+    onLock();
+  };
   return (
     <div className="screen-stack">
       <button className="back-button" onClick={onBack}><ArrowLeft size={16} /> Edit grid</button>
@@ -399,13 +429,13 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
       <ResolutionJourney stage="locked" />
       {onchainGame.configured ? (
         <div className="stake-card" aria-label="On-chain stake allocation">
-          <header><span>Stake on Bradbury</span><label><input aria-label="Stake in GEN" inputMode="decimal" min="10" step="1" value={stakeInput} onChange={(event) => onStakeInput(event.target.value)} /><b>GEN</b></label></header>
-          <div><span><i className="tier-common" />Common pools</span><b>1.5 GEN / 15%</b></div>
-          <div><span><i className="tier-medium" />Medium pools</span><b>3 GEN / 30%</b></div>
-          <div><span><i className="tier-rare" />Rare pools</span><b>4.5 GEN / 45%</b></div>
-          <div><span><Trophy size={13} />Jackpot</span><b>0.5 GEN / 5%</b></div>
-          <div><span><ShieldCheck size={13} />Protocol</span><b>0.5 GEN / 5%</b></div>
-          <p>Figures shown per 10 GEN. Larger stakes scale every allocation proportionally.</p>
+          <header><span>Stake on Bradbury</span><label><input aria-label="Stake in GEN" inputMode="decimal" min="10" max="100" step="1" value={stakeInput} onChange={(event) => { setConfirmed(false); onStakeInput(event.target.value); }} /><b>GEN</b></label></header>
+          <div><span><i className="tier-common" />Common pools</span><b>{allocation ? formatGen(allocation.common) : "—"} GEN / 15%</b></div>
+          <div><span><i className="tier-medium" />Medium pools</span><b>{allocation ? formatGen(allocation.medium) : "—"} GEN / 30%</b></div>
+          <div><span><i className="tier-rare" />Rare pools</span><b>{allocation ? formatGen(allocation.rare) : "—"} GEN / 45%</b></div>
+          <div><span><Trophy size={13} />Jackpot</span><b>{allocation ? formatGen(allocation.jackpot) : "—"} GEN / 5%</b></div>
+          <div><span><ShieldCheck size={13} />Protocol</span><b>{allocation ? formatGen(allocation.protocol) : "—"} GEN / 5%</b></div>
+          <p>Maximum loss: {allocation ? formatGen(allocation.stake) : "—"} GEN. Testnet GEN has no promised cash value. Pool backing is public on-chain and payouts depend on other entries.</p>
         </div>
       ) : (
         <div className="privacy-proof" aria-label="GenLayer resolution path">
@@ -418,9 +448,11 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
       <GridBoard grid={grid} locked />
       <div className="lock-card"><div className="lock-icon"><LockKeyhole size={20} /></div><div><strong>{onchainGame.configured ? "One signed entry, nine live pools" : "Grid fixed for this replay"}</strong><p>{onchainGame.configured ? "The payable transaction stores your grid and allocates your GEN on-chain." : "Your nine selections are now the immutable scoring input."}</p></div></div>
       {onchainGame.configured && <div className="privacy-note"><ShieldCheck size={16} /><span>Jackpot requires a correct horizontal row plus a correct diagonal · {onchainGame.config.network}.</span></div>}
+      {onchainGame.configured && !v2Ready && !onchainGame.entry && <p className="error-message">This legacy replay round is view-only. New stakes reopen after the V2 contracts are deployed with a future kickoff and evidence window.</p>}
+      {confirmed && !onchainGame.entry && <div className="confirmation-card" role="alert"><strong>Confirm your maximum loss</strong><p>You are committing {stakeInput} testnet GEN to nine transparent pari-mutuel pools. Picks cannot be edited after finalization.</p></div>}
       {!onchainGame.configured && genLayerConfigured && genLayerResolverConfig.moment && grid.includes(genLayerResolverConfig.moment.prediction_id as PredictionId) && <div className="privacy-note"><ShieldCheck size={16} /><span>{genLayerResolverConfig.moment.moment_statement} is pre-registered on {genLayerResolverConfig.network} · {phase === "READY" ? "ready" : "verified at lock"}.</span></div>}
       {error && <p className="error-message">{error}</p>}
-      <button className="primary-button pulse-button" onClick={onLock} disabled={busy}>{busy ? (onchainGame.configured ? "Signing Bradbury entry…" : "Checking GenLayer registration…") : onchainGame.entry ? "Entry secured · start replay" : onchainGame.configured ? `Stake ${stakeInput || "0"} GEN & lock` : "Lock & start replay"} <LockKeyhole size={17} /></button>
+      <button className="primary-button pulse-button" onClick={requestLock} disabled={busy || (onchainGame.configured && !onchainGame.entry && (!allocation || !v2Ready))}>{busy ? (onchainGame.configured ? `${onchainGame.transactionStage.toLowerCase()}…` : "Checking GenLayer registration…") : onchainGame.entry ? "Entry secured · start replay" : onchainGame.configured ? confirmed ? `Confirm & sign ${stakeInput || "0"} GEN` : `Review ${stakeInput || "0"} GEN stake` : "Lock & start replay"} <LockKeyhole size={17} /></button>
     </div>
   );
 }
@@ -461,7 +493,7 @@ function WatchScreen({ snapshot, error, phase, transactionHash, busy, onchain, o
           </div>
         ))}
       </div>
-      <div className="sealed-panel"><div className="sealed-orbit"><LockKeyhole size={26} /><span /></div><strong>Your predictions are locked</strong><p>Conditions resolve across all 90 minutes. The registered criterion is settled after full time.</p></div>
+      <div className="sealed-panel"><div className="sealed-orbit"><LockKeyhole size={26} /><span /></div><strong>Your predictions are locked</strong><p>Picks and pool backing are transparent on-chain. Validator-agreed evidence settles the grid after full time.</p></div>
       <div className="feed-section"><div className="section-heading"><span>Match pulse</span><small>{snapshot.events.length} events</small></div><div className="event-feed">{snapshot.events.length === 0 && <div className="empty-event">Waiting for kickoff…</div>}{[...snapshot.events].reverse().slice(0, 4).map((event, index) => <EventRow event={event} newest={index === 0} key={`${event.minute}-${event.eventType}`} />)}</div></div>
       {transactionHash && <div className="privacy-note"><ShieldCheck size={16} /><span>{onchain ? "Bradbury entry" : "Studionet transaction"} {transactionHash.slice(0, 10)}…{transactionHash.slice(-6)} · {onchain ? "accepted" : phase.toLowerCase()}</span></div>}
       {error && <p className="error-message">{error}</p>}
@@ -483,7 +515,8 @@ function EventGlyph({ eventType }: { eventType: MatchEventType }) {
   return <span className="moment-glyph">{glyphs[eventType]}</span>;
 }
 
-function RevealScreen({ grid, markedMask, completedLines, genLayerResolution, genLayerPhase, transactionHash, revealed, onReveal, onContinue }: { grid: PredictionId[]; markedMask: number; completedLines: number; genLayerResolution: ResolverRecord | null; genLayerPhase: GenLayerResolutionPhase; transactionHash: `0x${string}` | null; revealed: boolean; onReveal: () => void; onContinue: () => void }) {
+function RevealScreen({ grid, markedMask, completedLines, genLayerResolution, genLayerPhase, transactionHash, revealed, onReveal, onContinue, onchainGame }: { grid: PredictionId[]; markedMask: number; completedLines: number; genLayerResolution: ResolverRecord | null; genLayerPhase: GenLayerResolutionPhase; transactionHash: `0x${string}` | null; revealed: boolean; onReveal: () => void; onContinue: () => void; onchainGame: OnchainGame }) {
+  const chainSettled = !onchainGame.configured || onchainGame.round?.status === "SETTLED";
   const lineIndexes = revealed ? completedLineIndexes(markedMask) : [];
   const lineCellOrder = Array<number>(9).fill(-1);
   lineIndexes.forEach((lineIndex, order) => {
@@ -494,20 +527,33 @@ function RevealScreen({ grid, markedMask, completedLines, genLayerResolution, ge
 
   return (
     <div className="screen-stack reveal-screen">
-      <div><span className="step-label">04 · Reveal</span><h1>{revealed ? "The crowd called it." : "Ready for the truth?"}</h1></div>
-      <p className="lede">Five-dot meters show how strongly the locked crowd backed each prediction.</p>
+      <div><span className="step-label">04 · Reveal</span><h1>{!chainSettled ? "Full time. Consensus pending." : revealed ? "The chain settled it." : "Ready for the truth?"}</h1></div>
+      <p className="lede">{chainSettled ? "Live pool meters show the public backing behind each call." : "The replay is only a preview. Winnings and marks appear only after the GenLayer round is settled."}</p>
       <ResolutionJourney stage={revealed ? "resolved" : "locked"} />
       {genLayerResolution?.status === "SETTLED" && <GenLayerResolutionProof resolution={genLayerResolution} phase={genLayerPhase} transactionHash={transactionHash} />}
       <div className={`reveal-wrap ${revealed ? "is-revealed" : ""}`}>
-        <GridBoard grid={grid} locked={!revealed} revealed={revealed} markedMask={markedMask} showConsensus={revealed} lineCellOrder={lineCellOrder} />
+        <GridBoard grid={grid} locked={!revealed} revealed={revealed} markedMask={markedMask} showConsensus={revealed} lineCellOrder={lineCellOrder} pools={onchainGame.pools} />
         {revealed && <LineIgnitionOverlay lineIndexes={lineIndexes} />}
         {!revealed && <div className="reveal-scrim"><LockKeyhole size={28} /><span>Locked grid</span></div>}
       </div>
       {revealed && <div className="consensus-key"><span><i className="is-filled" />○○○○ Contrarian</span><span><i className="is-filled" /><i className="is-filled" /><i className="is-filled" /><i className="is-filled" /><i className="is-filled" /> Crowd favorite</span></div>}
       {revealed && <div className="line-result"><div><Flame size={22} /><span><strong>{completedLines}</strong> {completedLines === 1 ? "line" : "lines"} complete</span></div><small>Equal scoring</small></div>}
-      <button className="primary-button" onClick={revealed ? onContinue : onReveal}>{revealed ? "View round result" : "Reveal predictions"}{revealed ? <Trophy size={18} /> : <Eye size={18} />}</button>
+      {!chainSettled ? <button className="primary-button" onClick={() => void onchainGame.refresh()} disabled={onchainGame.busy}>Refresh on-chain settlement <ShieldCheck size={18} /></button> : <button className="primary-button" onClick={revealed ? onContinue : onReveal}>{revealed ? "View round result" : "Reveal settled predictions"}{revealed ? <Trophy size={18} /> : <Eye size={18} />}</button>}
+      {!chainSettled && <OnchainRoundPanel game={onchainGame} />}
     </div>
   );
+}
+
+function marketSupport(pools: OnchainGame["pools"], cell: number, momentId: number): number {
+  const pool = pools.find((value) => Number(value.cell) === cell);
+  if (!pool || pool.total_pool === 0n) return 0;
+  const options = [
+    [pool.option_0_moment_id, pool.option_0_stake],
+    [pool.option_1_moment_id, pool.option_1_stake],
+    [pool.option_2_moment_id, pool.option_2_stake],
+  ] as const;
+  const stake = options.find(([id]) => Number(id) === momentId)?.[1] ?? 0n;
+  return Number(stake * 100n / pool.total_pool);
 }
 
 function GenLayerResolutionProof({ resolution, phase, transactionHash }: { resolution: ResolverRecord; phase: GenLayerResolutionPhase; transactionHash: `0x${string}` | null }) {
@@ -587,7 +633,7 @@ function RewardScreen({ completedLines, jackpotQualified, resolution, onchainGam
   return (
     <div className="screen-stack reward-screen">
       <div className="reward-burst"><span /><div><Trophy size={36} /></div></div>
-      <div className="reward-copy"><span className="step-label">05 · Result</span><h1>{completedLines > 0 ? "Lines secured." : "Next call wins."}</h1><p>{completedLines > 0 ? `You completed ${completedLines} ${completedLines === 1 ? "line" : "lines"} across the match.` : "No complete line this time. Build a new grid and try another set of calls."}</p></div>
+      <div className="reward-copy"><span className="step-label">05 · Result</span><h1>{completedLines > 0 ? "Lines secured." : "Round complete."}</h1><p>{completedLines > 0 ? `You completed ${completedLines} ${completedLines === 1 ? "line" : "lines"} across the match.` : "No complete line this round. Your settled position and claim status remain available under My entries."}</p></div>
       <ResolutionLoop />
       {onchainGame.configured && <OnchainRoundPanel game={onchainGame} previewJackpotQualified={jackpotQualified} />}
       <div className="proof-card"><span>GenLayer proof</span><div><strong>{resolution?.status === "SETTLED" ? `${resolution.result} · ${resolution.reason_code}` : "Demo resolution"}</strong><small>{resolution?.status === "SETTLED" ? resolution.evidence_summary : "The reviewer page exposes the full reusable adjudication record."}</small></div></div>
@@ -598,25 +644,39 @@ function RewardScreen({ completedLines, jackpotQualified, resolution, onchainGam
   );
 }
 
-function OnchainRoundPanel({ game, previewJackpotQualified }: { game: OnchainGame; previewJackpotQualified: boolean }) {
+function OnchainRoundPanel({ game }: { game: OnchainGame; previewJackpotQualified?: boolean }) {
   const round = game.round;
   const entry = game.entry;
   const canClaim = Boolean(entry && !entry.claimed && entry.claimable > 0n);
+  const [now, setNow] = useState(0);
+  useEffect(() => {
+    const update = () => setNow(Date.now());
+    const frame = window.requestAnimationFrame(update);
+    const timer = window.setInterval(update, 30_000);
+    return () => { window.cancelAnimationFrame(frame); window.clearInterval(timer); };
+  }, []);
+  const resolveAt = round?.resolve_not_before ? Date.parse(round.resolve_not_before) : Number.POSITIVE_INFINITY;
+  const refundAt = round?.refund_at ? Date.parse(round.refund_at) : Number.POSITIVE_INFINITY;
+  const canResolve = round?.status === "OPEN" && now >= resolveAt && now < refundAt && round.liquidity_ready !== false;
+  const canRefund = Boolean(round && ["OPEN", "SCORING"].includes(round.status) && (
+    now >= refundAt || (now >= Date.parse(round.lock_at) && round.liquidity_ready === false)
+  ));
   return (
     <section className="onchain-round-card" aria-label="Bradbury game position">
       <header><span>Bradbury position</span><b>{round?.status ?? "LOADING"}</b></header>
       <dl>
         <div><dt>Your stake</dt><dd>{entry ? `${formatGen(entry.stake_amount)} GEN` : "No entry found"}</dd></div>
         <div><dt>Jackpot</dt><dd>{round ? `${formatGen(round.jackpot_pool)} GEN` : "—"}</dd></div>
-        <div><dt>Your preview</dt><dd>{previewJackpotQualified ? "Horizontal + diagonal" : "Not jackpot-qualified"}</dd></div>
+        <div><dt>Chain result</dt><dd>{round?.status === "SETTLED" ? (entry?.jackpot_qualified ? "Jackpot qualified" : "Settled") : "Not settled"}</dd></div>
         <div><dt>Claimable</dt><dd>{entry ? `${formatGen(entry.claimable)} GEN` : "—"}</dd></div>
       </dl>
-      {round?.status === "OPEN" && <button type="button" onClick={() => void game.resolve()} disabled={game.busy}>Resolve final match evidence</button>}
-      {round?.status === "OPEN" && <p>Entries lock {new Date(round.lock_at).toLocaleString()}. The contract accepts resolution only after lock.</p>}
+      {canResolve && <button type="button" onClick={() => void game.resolve()} disabled={game.busy}>Resolve final match evidence</button>}
+      {round?.status === "OPEN" && <p>Entries lock {new Date(round.lock_at).toLocaleString()}. Resolution opens {round.resolve_not_before ? new Date(round.resolve_not_before).toLocaleString() : "after the V2 migration"}.</p>}
       {round?.status === "SCORING" && <button type="button" onClick={() => void game.process()} disabled={game.busy}>Process jackpot scoring batch</button>}
+      {canRefund && <button type="button" onClick={() => void game.activateRefunds()} disabled={game.busy}>Open full refunds</button>}
       {(round?.status === "SETTLED" || round?.status === "REFUNDING") && canClaim && <button type="button" onClick={() => void game.claim()} disabled={game.busy}>Claim {formatGen(entry!.claimable)} GEN</button>}
       <button className="onchain-refresh" type="button" onClick={() => void game.refresh()} disabled={game.busy}>Refresh chain state</button>
-      {game.transactionHash && <p>Transaction {game.transactionHash.slice(0, 10)}…{game.transactionHash.slice(-6)} accepted.</p>}
+      {game.transactionHash && <p>Transaction {game.transactionHash.slice(0, 10)}…{game.transactionHash.slice(-6)} · {game.transactionStage.toLowerCase()}.</p>}
       {game.error && <p className="error-message">{game.error}</p>}
     </section>
   );
@@ -631,7 +691,7 @@ function PredictionPicker({ cell, selected, onSelect, onClose }: { cell: number;
       <div className="picker-sheet" role="dialog" aria-modal="true" aria-label="Choose a prediction">
         <div className="picker-handle" />
         <div className="picker-heading"><div><span className="step-label">{TIER_NAMES[tier]} · {WINDOW_LABELS[column]}′</span><h2>Choose your call</h2></div><button onClick={onClose}>×</button></div>
-        <p className="picker-privacy">Crowd backing unlocks after all grids are sealed.</p>
+        <p className="picker-privacy">Pool backing is public on-chain. Your grid becomes immutable after the entry transaction finalizes.</p>
         <div className="picker-options">
           {pool.map((predictionId) => {
             const definition = PREDICTIONS[predictionId];

@@ -11,7 +11,7 @@ const STEPS = [
   { n: "01", title: "Build nine calls", copy: "Fill every cell. Columns cover 0–30′, 30–60′, and 60–90+′. Each row uses its own rarity pool.", icon: Grid3X3 },
   { n: "02", title: "Stake and lock", copy: "Stake at least 10 GEN and commit all nine calls before the round locks. Your packed grid is stored on-chain.", icon: LockKeyhole },
   { n: "03", title: "Back nine pools", copy: "At 10 GEN: 4.5 backs Rare, 3 backs Medium, 1.5 backs Common, 0.5 funds the jackpot, and 0.5 is the protocol fee.", icon: Coins },
-  { n: "04", title: "Resolve the evidence", copy: "GenLayer validators evaluate the registered match sources and finalize all supported moments.", icon: Scale },
+  { n: "04", title: "Resolve the evidence", copy: "GenLayer validators compare distinct registered publishers. A call without complete evidence coverage is refunded rather than guessed FALSE.", icon: Scale },
   { n: "05", title: "Win pools and jackpot", copy: "Correct calls share each cell pool. Complete a horizontal row plus a diagonal to share the jackpot.", icon: Trophy },
 ] as const;
 
@@ -37,7 +37,7 @@ export default function RulesPage() {
 
       <section className="chain-native-rule">
         <header><ShieldCheck size={18} /><div><span>Why GenLayer</span><strong>Public evidence needs shared judgment.</strong></div></header>
-        <p>Validators compare independent match sources and finalize TRUE, FALSE, or INVALID with a structured evidence record.</p>
+        <p>Validators independently compare public sources. Supported calls settle TRUE or FALSE; unsupported evidence coverage refunds the affected pool stake.</p>
         <div><span><Scale size={14} /> Consensus resolves the moment</span><i>→</i><span><Grid3X3 size={14} /> Pure code scores every grid</span></div>
       </section>
     </PrototypeShell>

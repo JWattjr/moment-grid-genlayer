@@ -17,7 +17,8 @@ export type GenLayerResolutionPhase =
   | "CHECKING"
   | "READY"
   | "SUBMITTED"
-  | "ACCEPTED"
+  | "FINALIZING"
+  | "FINALIZED"
   | "SETTLED"
   | "ERROR";
 
@@ -95,7 +96,7 @@ export function useGenLayerResolution() {
     error,
     phase,
     transactionHash,
-    busy: ["CHECKING", "SUBMITTED", "ACCEPTED"].includes(phase),
+    busy: ["CHECKING", "SUBMITTED", "FINALIZING"].includes(phase),
     lock,
     resolve,
   };

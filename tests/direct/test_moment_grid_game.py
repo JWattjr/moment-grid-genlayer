@@ -18,6 +18,13 @@ def pack(moment_ids):
     return value
 
 
+def bitmap(*moment_ids):
+    value = 0
+    for moment_id in moment_ids:
+        value |= 1 << moment_id
+    return value
+
+
 def address(raw):
     from genlayer import Address
 
@@ -26,6 +33,7 @@ def address(raw):
 
 GRID_A = pack([1, 4, 7, 10, 13, 16, 19, 22, 25])
 GRID_B = pack([2, 5, 8, 11, 14, 17, 20, 23, 26])
+GRID_A_DIVERSE = pack([1, 4, 7, 11, 13, 16, 19, 22, 25])
 
 
 def create_round(
@@ -33,6 +41,8 @@ def create_round(
     resolver,
     round_id=ROUND_ID,
     lock_at="2026-08-11T13:00:00Z",
+    kickoff_at="2026-08-11T13:30:00Z",
+    resolve_not_before="2026-08-11T16:00:00Z",
     refund_at="2026-08-12T13:00:00Z",
 ):
     contract.create_round(
@@ -41,7 +51,12 @@ def create_round(
         address(resolver),
         RESOLUTION_ID,
         lock_at,
+        kickoff_at,
+        resolve_not_before,
         refund_at,
+        2,
+        20 * GEN,
+        2,
     )
 
 
@@ -62,7 +77,7 @@ def settle(
     batch=100,
 ):
     direct_vm.value = 0
-    direct_vm.warp("2026-08-11T13:00:01Z")
+    direct_vm.warp("2026-08-11T16:00:01Z")
     direct_vm.sender = resolver
     contract.accept_resolution(
         round_id,
@@ -71,6 +86,9 @@ def settle(
         window_0,
         window_1,
         window_2,
+        bitmap(1, 2, 3, 10, 11, 12, 19, 20, 21),
+        bitmap(4, 5, 6, 13, 14, 15, 22, 23, 24),
+        bitmap(7, 8, 9, 16, 17, 18, 25, 26, 27),
     )
     if contract.get_round(round_id)["status"] == "SCORING":
         contract.process_settlement(round_id, batch)
@@ -152,6 +170,10 @@ def test_entry_requires_minimum_value_and_valid_choice_per_cell(
     with pytest.raises(Exception, match="Minimum stake is 10 GEN"):
         contract.join_round(ROUND_ID, GRID_A)
 
+    direct_vm.value = 100 * GEN + 1
+    with pytest.raises(Exception, match="Maximum testnet stake is 100 GEN"):
+        contract.join_round(ROUND_ID, GRID_A)
+
     direct_vm.value = MINIMUM_STAKE
     invalid_grid = pack([4, 4, 7, 10, 13, 16, 19, 22, 25])
     with pytest.raises(Exception, match="Moment is not valid"):
@@ -225,12 +247,13 @@ def test_full_correct_grid_wins_all_regular_pools_and_the_jackpot(
 
 
 def test_jackpot_requires_at_least_one_horizontal_and_one_diagonal(
-    direct_vm, direct_deploy, direct_alice
+    direct_vm, direct_deploy, direct_alice, direct_bob
 ):
     direct_vm.warp("2026-08-11T12:00:00Z")
     contract = direct_deploy(CONTRACT)
     create_round(contract, direct_alice)
     enter(direct_vm, contract, direct_alice)
+    enter(direct_vm, contract, direct_bob, GRID_B)
 
     # Cells 0,1,2 complete the top horizontal and cells 0,4,8 complete a diagonal.
     settle(
@@ -255,14 +278,14 @@ def test_jackpot_is_shared_pro_rata_by_qualifying_stake(
     contract = direct_deploy(CONTRACT)
     create_round(contract, direct_alice)
     enter(direct_vm, contract, direct_alice, stake=10 * GEN)
-    enter(direct_vm, contract, direct_bob, stake=20 * GEN)
+    enter(direct_vm, contract, direct_bob, GRID_A_DIVERSE, stake=20 * GEN)
 
     settle(direct_vm, contract, direct_alice, *all_grid_a_true())
 
     assert contract.get_round(ROUND_ID)["jackpot_pool"] == GEN + GEN // 2
     assert contract.get_round(ROUND_ID)["jackpot_winning_stake"] == 30 * GEN
-    assert contract.get_entry(ROUND_ID, address(direct_alice))["claimable"] == 9 * GEN + GEN // 2
-    assert contract.get_entry(ROUND_ID, address(direct_bob))["claimable"] == 19 * GEN
+    assert contract.get_entry(ROUND_ID, address(direct_alice))["claimable"] == 11 * GEN + GEN // 2
+    assert contract.get_entry(ROUND_ID, address(direct_bob))["claimable"] == 17 * GEN
 
 
 def test_no_jackpot_winner_rolls_the_jackpot_forward(
@@ -302,9 +325,17 @@ def test_jackpot_scoring_is_permissionless_and_batched(
     enter(direct_vm, contract, direct_charlie)
 
     direct_vm.value = 0
-    direct_vm.warp("2026-08-11T13:00:01Z")
+    direct_vm.warp("2026-08-11T16:00:01Z")
     direct_vm.sender = direct_alice
-    contract.accept_resolution(ROUND_ID, RESOLUTION_ID, MATCH_ID, *all_grid_a_true())
+    contract.accept_resolution(
+        ROUND_ID,
+        RESOLUTION_ID,
+        MATCH_ID,
+        *all_grid_a_true(),
+        bitmap(1, 2, 3, 10, 11, 12, 19, 20, 21),
+        bitmap(4, 5, 6, 13, 14, 15, 22, 23, 24),
+        bitmap(7, 8, 9, 16, 17, 18, 25, 26, 27),
+    )
 
     direct_vm.sender = direct_bob
     contract.process_settlement(ROUND_ID, 2)
@@ -324,11 +355,11 @@ def test_only_configured_resolver_can_deliver_finalized_bitmaps(
     direct_vm.warp("2026-08-11T12:00:00Z")
     contract = direct_deploy(CONTRACT)
     create_round(contract, direct_alice)
-    direct_vm.warp("2026-08-11T13:00:01Z")
+    direct_vm.warp("2026-08-11T16:00:01Z")
     direct_vm.sender = direct_bob
 
     with pytest.raises(Exception, match="Only the configured resolver"):
-        contract.accept_resolution(ROUND_ID, RESOLUTION_ID, MATCH_ID, 0, 0, 0)
+        contract.accept_resolution(ROUND_ID, RESOLUTION_ID, MATCH_ID, 0, 0, 0, 0, 0, 0)
 
 
 def test_unbacked_true_options_refund_regular_pool_stakes_but_not_fees(
@@ -351,3 +382,122 @@ def test_unbacked_true_options_refund_regular_pool_stakes_but_not_fees(
 
     assert contract.get_entry(ROUND_ID, address(direct_alice))["claimable"] == 9 * GEN
     assert contract.get_entry(ROUND_ID, address(direct_bob))["claimable"] == 9 * GEN
+
+
+def test_resolution_cannot_start_before_post_match_evidence_window(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    create_round(contract, direct_alice)
+    enter(direct_vm, contract, direct_alice, GRID_A)
+    enter(direct_vm, contract, direct_bob, GRID_B)
+    direct_vm.sender = direct_alice
+    direct_vm.value = 0
+    direct_vm.warp("2026-08-11T13:59:59Z")
+
+    with pytest.raises(Exception, match="evidence window has not opened"):
+        contract.accept_resolution(ROUND_ID, RESOLUTION_ID, MATCH_ID, 0, 0, 0, 0, 0, 0)
+
+
+def test_underfilled_round_can_be_refunded_immediately_after_lock(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    create_round(contract, direct_alice)
+    enter(direct_vm, contract, direct_alice, GRID_A)
+    direct_vm.sender = direct_bob
+    direct_vm.value = 0
+    direct_vm.warp("2026-08-11T13:00:01Z")
+    contract.activate_refunds(ROUND_ID)
+
+    assert contract.get_round(ROUND_ID)["status"] == "REFUNDING"
+    assert contract.get_entry(ROUND_ID, address(direct_alice))["claimable"] == 10 * GEN
+
+
+def test_unknown_evidence_refunds_only_the_affected_choice(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    create_round(contract, direct_alice)
+    enter(direct_vm, contract, direct_alice, GRID_A)
+    enter(direct_vm, contract, direct_bob, GRID_B)
+    direct_vm.sender = direct_alice
+    direct_vm.value = 0
+    direct_vm.warp("2026-08-11T16:00:01Z")
+    all_valid_0 = bitmap(1, 2, 3, 10, 11, 12, 19, 20, 21) & ~(1 << 1)
+    contract.accept_resolution(
+        ROUND_ID,
+        RESOLUTION_ID,
+        MATCH_ID,
+        *all_grid_a_true(),
+        all_valid_0,
+        bitmap(4, 5, 6, 13, 14, 15, 22, 23, 24),
+        bitmap(7, 8, 9, 16, 17, 18, 25, 26, 27),
+    )
+    contract.process_settlement(ROUND_ID, 100)
+
+    # Cell zero is unknown for Alice, so her 0.5 GEN cell stake is returned.
+    assert contract.get_cell_pool(ROUND_ID, 0)["refundable_stake"] == GEN // 2
+    assert contract.get_entry(ROUND_ID, address(direct_alice))["claimable"] == 18 * GEN + GEN // 2
+
+
+def test_indexed_entry_exposes_the_committing_wallet(
+    direct_vm, direct_deploy, direct_alice
+):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    create_round(contract, direct_alice)
+    enter(direct_vm, contract, direct_alice, GRID_A)
+
+    indexed = contract.get_entry_by_index(ROUND_ID, 0)
+    assert indexed["player"].lower() == str(address(direct_alice)).lower()
+    assert indexed["packed_grid"] == GRID_A
+
+
+def test_scoring_timeout_can_open_full_refunds(
+    direct_vm, direct_deploy, direct_alice, direct_bob
+):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    create_round(contract, direct_alice)
+    enter(direct_vm, contract, direct_alice, GRID_A)
+    enter(direct_vm, contract, direct_bob, GRID_B)
+    direct_vm.sender = direct_alice
+    direct_vm.value = 0
+    direct_vm.warp("2026-08-11T16:00:01Z")
+    contract.accept_resolution(
+        ROUND_ID, RESOLUTION_ID, MATCH_ID, *all_grid_a_true(),
+        bitmap(1, 2, 3, 10, 11, 12, 19, 20, 21),
+        bitmap(4, 5, 6, 13, 14, 15, 22, 23, 24),
+        bitmap(7, 8, 9, 16, 17, 18, 25, 26, 27),
+    )
+    assert contract.get_round(ROUND_ID)["status"] == "SCORING"
+    direct_vm.sender = direct_bob
+    direct_vm.warp("2026-08-12T13:00:01Z")
+    contract.activate_refunds(ROUND_ID)
+    assert contract.get_round(ROUND_ID)["status"] == "REFUNDING"
+
+
+def test_jackpot_rolls_to_the_next_created_open_round(direct_vm, direct_deploy, direct_alice, direct_bob):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    create_round(contract, direct_alice)
+    create_round(
+        contract,
+        direct_alice,
+        round_id="round-2",
+        lock_at="2026-08-13T13:00:00Z",
+        kickoff_at="2026-08-13T13:30:00Z",
+        resolve_not_before="2026-08-13T16:00:00Z",
+        refund_at="2026-08-14T13:00:00Z",
+    )
+    enter(direct_vm, contract, direct_alice, GRID_A)
+    enter(direct_vm, contract, direct_bob, GRID_B)
+    settle(direct_vm, contract, direct_alice, bitmap(1), 0, 0)
+
+    assert contract.get_round(ROUND_ID)["jackpot_rollover_destination"] == "round-2"
+    assert contract.get_round("round-2")["jackpot_seed"] == GEN
+    assert contract.get_protocol_balances()["jackpot_rollover"] == 0

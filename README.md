@@ -48,19 +48,22 @@ Standalone architecture, safety properties, and integration guidance are in [`co
 
 ## On-chain Game Economy
 
-The next contract layer is now implemented locally:
+The V2 contract layer is implemented and locally verified:
 
-- [`contracts/match_round_resolver.py`](contracts/match_round_resolver.py) resolves all 27 supported moments into three validator-agreed window bitmaps;
+- [`contracts/match_round_resolver.py`](contracts/match_round_resolver.py) resolves supported moments into validator-agreed truth and evidence-coverage bitmaps;
 - [`contracts/moment_grid_game.py`](contracts/moment_grid_game.py) accepts a payable grid entry of at least 10 GEN, applies rarity-weighted nine-pool accounting, settles only from the round resolver, scores the packed grid, and supports pull-based GEN claims or full timeout refunds;
 - 90% of every stake backs the nine regular pools, 5% funds the rolling jackpot, and 5% becomes protocol revenue only after successful settlement;
 - a jackpot grid must complete at least one horizontal row and at least one diagonal. Qualifiers share that round's jackpot pro rata by gross stake; otherwise it rolls into the next round.
+- future kickoff/evidence windows, liquidity and unique-grid gates, partial evidence refunds, scoring timeout recovery, two-step ownership, indexed entries, and finalized transaction UX are enforced.
 
 The complete trust boundary and payout rules are documented in [`docs/ONCHAIN_GAME.md`](docs/ONCHAIN_GAME.md). These contracts are intended for persistent Testnet Bradbury; the existing Studionet resolver remains the live reviewer proof.
 
-The weighted-pool game is deployed on Testnet Bradbury at
+The legacy V1 weighted-pool game is deployed on Testnet Bradbury at
 `0xb0D73f47583617F0f06924f24D47137BEfEa4708`. Its accepted deployment and
 live 10 GEN allocation check are recorded in
 [`deployments/genlayer/bradbury.json`](deployments/genlayer/bradbury.json).
+The web app treats V1 as view-only. V2 needs a fresh deployment and a real
+future fixture before new entries are re-enabled.
 
 ## Live GenLayer Proof
 
@@ -175,6 +178,8 @@ See [`docs/STUDIONET_RUNBOOK.md`](docs/STUDIONET_RUNBOOK.md) and [`docs/GENLAYER
 
 - [GenLayer contribution drafts](docs/GENLAYER_SUBMISSION.md)
 - [60–90 second demo script](docs/DEMO_SCRIPT.md)
+- [V2 release gates and product roadmap](docs/PRODUCT_ROADMAP.md)
+- [Responsible play and launch constraints](docs/RESPONSIBLE_PLAY.md)
 - [Answer-free demo fixtures](fixtures/genlayer/)
 - [Deployment record](deployments/genlayer/studionet.json)
 

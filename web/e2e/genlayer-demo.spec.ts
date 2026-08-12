@@ -43,17 +43,22 @@ async function mockHistory(page: Page, results: Result[]) {
   });
 }
 
-test("player can quick-fill, review, and lock the existing grid", async ({ page }) => {
+test("player can random-fill, review, and lock the demo grid", async ({ page }) => {
   await page.goto("/");
   const skip = page.getByRole("button", { name: "Skip" });
   await skip.waitFor({ state: "visible", timeout: 3_000 }).catch(() => undefined);
   if (await skip.isVisible()) await skip.click();
-  await page.getByRole("button", { name: "Quick fill" }).click();
+  await page.getByRole("button", { name: "Random fill" }).click();
   await expect(page.getByRole("button", { name: "Review my grid" })).toBeEnabled();
   await page.getByRole("button", { name: "Review my grid" }).click();
   await expect(page.getByText("Commit to your calls.")).toBeVisible();
-  await page.getByRole("button", { name: "Lock & start replay" }).click({ force: true });
-  await expect(page.getByText("Your predictions are locked")).toBeVisible();
+  const legacyGuard = page.getByText(/legacy replay round is view-only/i);
+  if (await legacyGuard.isVisible()) {
+    await expect(page.getByRole("button", { name: /review 10 gen stake/i })).toBeDisabled();
+  } else {
+    await page.getByRole("button", { name: "Lock & start replay" }).click();
+    await expect(page.getByText("Your predictions are locked")).toBeVisible();
+  }
 });
 
 for (const scenario of ["TRUE", "FALSE", "INVALID"] as const) {

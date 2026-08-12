@@ -64,6 +64,23 @@ export function packGrid(grid: PredictionId[]): bigint {
   return grid.reduce((packed, moment, cell) => packed | (BigInt(MOMENT_IDS[moment]) << BigInt(cell * 8)), 0n);
 }
 
+const PREDICTION_BY_MOMENT_ID = Object.fromEntries(
+  Object.entries(MOMENT_IDS).map(([prediction, momentId]) => [momentId, prediction]),
+) as Record<number, PredictionId>;
+
+/// Restores the exact row-major grid committed to the game contract. Invalid
+/// bytes are rejected instead of being replaced with a frontend default.
+export function unpackGrid(packedGrid: bigint): PredictionId[] {
+  const grid: PredictionId[] = [];
+  for (let cell = 0; cell < GRID_CELLS; cell += 1) {
+    const momentId = Number((packedGrid >> BigInt(cell * 8)) & 0xffn);
+    const prediction = PREDICTION_BY_MOMENT_ID[momentId];
+    if (!prediction) throw new Error(`Packed grid contains unknown moment id ${momentId}.`);
+    grid.push(prediction);
+  }
+  return grid;
+}
+
 export function assertFullGrid(grid: PredictionId[]): void {
   if (grid.length !== GRID_CELLS) {
     throw new Error(`A Moment Grid must contain exactly nine predictions, received ${grid.length}.`);

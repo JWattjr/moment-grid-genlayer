@@ -25,11 +25,9 @@ shell history, repository, or chat.
 .\scripts\deploy-onchain-game.ps1 -AccountName moment-grid-studionet
 ```
 
-The game must be deployed before a new round resolver because the resolver's
-registered match includes the game callback address. An already deployed
-compatible resolver can be reused. Record contract addresses and deployment
-transaction hashes. Pass `-DeployResolver` only when a new resolver deployment
-is actually required.
+The script deploys both V2 contracts because the validity-bitmap callback is not
+ABI-compatible with V1. Record both contract addresses and finalized deployment
+transaction hashes.
 
 ## 3. Register one resolver round
 
@@ -46,7 +44,9 @@ genlayer write <round-resolver-address> register_round --args `
   2026-08-20 `
   '["https://www.bbc.co.uk/...","https://www.espn.com/..."]' `
   <game-contract-address> `
-  epl-example-round
+  epl-example-round `
+  2026-08-20T20:30:00Z `
+  2026-08-22T18:00:00Z
 ```
 
 Use real match URLs and dates. The resolver input never contains expected
@@ -63,11 +63,17 @@ genlayer write <game-contract-address> create_round --args `
   epl-example-match `
   <round-resolver-address> `
   epl-example-round `
+  2026-08-20T17:55:00Z `
   2026-08-20T18:00:00Z `
-  2026-08-22T18:00:00Z
+  2026-08-20T20:30:00Z `
+  2026-08-22T18:00:00Z `
+  2 `
+  20000000000000000000 `
+  2
 ```
 
-The lock must be in the future and the refund time must be later than the lock.
+The contract enforces `lock < kickoff <= resolution opening < refund deadline`,
+at least two participants, at least 20 GEN, and at least two unique grids.
 
 ## 5. Exercise the full path
 
@@ -75,14 +81,16 @@ The lock must be in the future and the refund time must be later than the lock.
    `10 GEN` (`10000000000000000000` wei). At exactly 10 GEN, the three Common
    cells receive 0.5 GEN each, the Medium cells 1 GEN each, the Rare cells 1.5
    GEN each, the jackpot 0.5 GEN, and pending protocol revenue 0.5 GEN.
-2. After the match is final, anyone calls `resolve_round` on the resolver.
+2. After the match is final and `resolve_not_before`, anyone calls
+   `resolve_round` on the resolver.
 3. When that transaction finalizes, the resolver emits `accept_resolution` to
    the game with `on="finalized"`.
 4. Anyone calls `process_settlement(round_id, max_entries)` until the round
    reaches `SETTLED`. Use batches no larger than 100 entries.
 5. Read `get_entry` for the score, jackpot qualification, and claimable amount.
 6. The player calls `claim`; verify the receipt execution and GEN balance.
-7. If evidence never settles, call `activate_refunds` after `refund_at`, then
+7. If liquidity is under the configured floor after lock, or evidence/scoring
+   misses `refund_at`, call `activate_refunds`, then
    each player calls `claim` for the full entry.
 
 Always inspect execution output, not only lifecycle status:

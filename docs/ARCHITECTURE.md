@@ -8,7 +8,7 @@ Moment Grid separates real-world adjudication from deterministic game rules. Gen
 Player builds and locks a 3×3 grid
                  |
                  v
-Next.js application reads a registered criterion
+Next.js application commits one payable packed grid
                  |
                  v
 MatchMomentResolver on GenLayer Studionet
@@ -19,7 +19,7 @@ MatchMomentResolver on GenLayer Studionet
          independent validators
                  |
                  v
-      TRUE / FALSE / INVALID
+ truth bitmaps + evidence coverage bitmaps
                  |
                  v
 MomentGridGame applies the finalized bitmaps
@@ -55,7 +55,7 @@ The NestJS service is an optional replay and live-feed adapter. It stores match 
 3. Any account may request resolution; the caller cannot provide an answer or replace the sources.
 4. Validators fetch the registered sources and extract the bounded fact model.
 5. The equivalence principle compares stable fields: result, reason code, match status, and decisive minute.
-6. Deterministic resolver code stores the accepted outcome bitmaps and sends them to the authenticated game callback. INVALID remains retryable.
+6. Deterministic resolver code stores truth and validity bitmaps and sends them to the authenticated game callback. Unavailable, conflicting, or incomplete evidence remains retryable until the deadline; unsupported cells refund.
 7. Anyone processes bounded settlement batches. The game totals qualifying jackpot stake and opens regular and jackpot claims only when scoring is complete.
 
 ## Trust and failure model
@@ -63,7 +63,9 @@ The NestJS service is an optional replay and live-feed adapter. It stores match 
 - Registration is curated, but registered definitions cannot be overwritten.
 - Resolution is permissionless and answer-free.
 - Two configured sources must be available and materially consistent.
-- Missing identity, disagreement, unavailable evidence, or insufficient finality produces INVALID instead of a guessed result.
+- Missing identity, disagreement, unavailable evidence, or insufficient finality cannot become a guessed money result.
+- Game rounds enforce future kickoff and evidence windows, liquidity and grid-diversity floors, and permissionless timeout refunds.
+- The replay is non-authoritative. The UI restores the exact packed grid and score from contract state.
 - Settled records cannot be mutated.
 - The LLM does not calculate grid scores.
 - Private keys and account passwords are never accepted by repository scripts.

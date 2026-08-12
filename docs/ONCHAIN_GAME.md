@@ -11,9 +11,11 @@ responsibilities.
    on-chain.
 2. `MatchRoundResolver` fetches the registered public match sources. Validators
    independently extract the final match facts and compare the three stable
-   outcome bitmaps that cover all 27 supported moments.
+   outcome bitmaps plus evidence-coverage bitmaps. A missing statistic is never
+   silently treated as FALSE.
 3. After the resolver transaction is finalized, `MatchRoundResolver` emits an
-   authenticated settlement message to `MomentGridGame`. No owner or frontend
+   authenticated settlement message to `MomentGridGame` only after the
+   registered post-match evidence window. No owner or frontend
    can submit a winning bitmap, and an accepted-but-appealable result cannot
    release claims.
 4. Permissionless callers process settlement in bounded batches. Deterministic
@@ -42,6 +44,8 @@ or claimable balances.
 - If one or more backed moments in a cell are true, all winning stakes share the
   entire cell pool pro rata.
 - If no backed moment is true, every player receives that cell's stake back.
+- If the sources cannot prove a selected moment true or false, that selection's
+  cell stake is refunded and removed from the distributable pool.
 - A grid qualifies for the jackpot only when its correct cells contain at least
   one complete horizontal row and at least one complete diagonal.
 - Jackpot qualifiers share the round jackpot pro rata by gross stake. If no
@@ -49,7 +53,10 @@ or claimable balances.
 - Protocol revenue becomes withdrawable only after a successful settlement.
 - Settlement is processed in bounded batches so entrant growth cannot make the
   round impossible to finalize.
-- If a match cannot settle by the configured refund time, anyone can activate
+- A round requires at least two players, two unique grids, and the configured
+  total liquidity. If the gate is missed at lock, anyone can activate refunds.
+- If a match cannot settle by the configured refund time, or batched scoring
+  times out, anyone can activate
   refunds and each entrant can reclaim the full gross stake. No jackpot or
   protocol fee is retained from a refunded round.
 
@@ -59,3 +66,12 @@ Local direct tests cover validation, packing, scoring, pool accounting, and
 refund rules. Studionet is suitable for rehearsing signed transactions, but the
 public money-like test flow belongs on persistent Testnet Bradbury with faucet
 GEN.
+
+## V2 lifecycle safety
+
+`lock_at < kickoff_at <= resolve_not_before < refund_at` is enforced on-chain.
+The owner can cancel only before lock. After lock, recovery is permissionless.
+Contract pause stops new rounds and entries but never blocks scoring, refunds,
+claims, or withdrawals. Ownership transfer uses a two-step proposal and
+acceptance. All wallet writes wait for `FINALIZED` and verify successful
+execution before the UI reports completion.

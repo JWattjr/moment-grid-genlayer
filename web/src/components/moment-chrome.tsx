@@ -7,9 +7,9 @@ import { WalletButton } from "./wallet-button";
 
 const NAV_ITEMS = [
   { href: "/", label: "Play" },
+  { href: "/rounds", label: "Rounds" },
+  { href: "/entries", label: "Entries" },
   { href: "/leaderboard", label: "Ranks" },
-  { href: "/rules", label: "Rules" },
-  { href: "/genlayer", label: "GenLayer" },
 ] as const;
 
 export function MomentHeader({ feedbackEnabled, onOpenTutorial, onToggleFeedback }: { feedbackEnabled?: boolean; onOpenTutorial?: () => void; onToggleFeedback?: () => void }) {
@@ -45,6 +45,7 @@ export function MomentNav() {
           </Link>
         );
       })}
+      <div className="trust-links"><Link href="/rules">Rules</Link><Link href="/integrity">Integrity</Link><Link href="/responsible-play">Play safely</Link></div>
     </nav>
   );
 }

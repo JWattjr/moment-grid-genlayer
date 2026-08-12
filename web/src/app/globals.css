@@ -74,6 +74,11 @@ button:focus-visible { outline: 2px solid var(--lime); outline-offset: 3px; }
 .wordmark-mark svg { transform: rotate(7deg); }
 .wallet-button { display: flex; align-items: center; gap: 6px; height: 29px; padding: 0 10px; border: 1px solid var(--line); color: #b9c8c0; background: rgba(255,255,255,.035); border-radius: 99px; font-size: 10px; font-weight: 700; cursor: pointer; }
 .wallet-status { width: 6px; height: 6px; border-radius: 50%; background: var(--lime); box-shadow: 0 0 8px var(--lime); }
+.wallet-menu { position: relative; z-index: 30; }
+.wallet-button.is-wrong-network { color: var(--ink); background: #ff9fb9; }
+.wallet-popover { position: absolute; top: calc(100% + 7px); right: 0; width: 210px; display: grid; gap: 7px; padding: 11px; border: 2px solid var(--ink); color: var(--ink); background: var(--paper); box-shadow: 4px 4px 0 var(--ink); }
+.wallet-popover strong, .wallet-popover p { margin: 0; font-size: 10px; overflow-wrap: anywhere; }
+.wallet-popover button, .wallet-popover a { min-height: 38px; display: flex; align-items: center; justify-content: center; padding: 7px; border: 1.5px solid var(--ink); color: var(--ink); background: #fff; font-size: 10px; font-weight: 800; text-align: center; cursor: pointer; }
 
 .progress-rail { display: grid; grid-template-columns: repeat(5,1fr); gap: 5px; margin: 8px 0 23px; }
 .progress-segment { height: 2px; background: #22312a; border-radius: 3px; transition: background .3s; }
@@ -1136,6 +1141,63 @@ h1 { color: var(--ink); font-size: clamp(31px,8.7vw,39px); line-height: .98; let
   .podium-place.place-one { min-height: 114px; }
   .podium-place.place-two { min-height: 94px; }
   .podium-place.place-three { min-height: 82px; }
+}
+
+/* V2 product surfaces: readable, recoverable, and touch-safe. */
+.trust-links {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  padding: 7px 4px 1px;
+  border-top: 1px solid rgba(20, 24, 38, .18);
+}
+.moment-nav .trust-links a {
+  min-height: 24px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  font-size: 9px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.confirmation-card {
+  padding: 11px;
+  border: 2px solid var(--ink);
+  background: #fff0cb;
+  box-shadow: 3px 3px 0 var(--ink);
+}
+.confirmation-card strong { display: block; font-size: 11px; text-transform: uppercase; }
+.confirmation-card p { margin: 5px 0 0; color: var(--muted); font-size: 10px; line-height: 1.5; }
+.round-list { display: grid; gap: 13px; }
+.round-list-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 2px solid var(--ink);
+  color: var(--ink);
+  background: var(--paper);
+  box-shadow: 4px 4px 0 var(--ink);
+}
+.round-list-card header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.round-list-card header span { padding: 4px 6px; border: 1.5px solid var(--ink); background: var(--lime); font-size: 9px; font-weight: 800; }
+.round-list-card header b { max-width: 68%; font-family: "Archivo Black", Impact, sans-serif; font-size: 13px; font-weight: 400; text-align: right; overflow-wrap: anywhere; }
+.round-list-card > p, .round-list-card > small { margin: 0; color: var(--muted); font-size: 10px; line-height: 1.5; overflow-wrap: anywhere; }
+.round-list-card dl { display: grid; gap: 7px; margin: 0; }
+.round-list-card dl div { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.round-list-card dt { display: flex; align-items: center; gap: 5px; color: var(--muted); font-size: 10px; }
+.round-list-card dd { margin: 0; font-size: 10px; font-weight: 800; text-align: right; }
+.round-list-card > a:not(.primary-button) { color: var(--ink); font-size: 10px; font-weight: 800; text-underline-offset: 3px; }
+.liquidity-progress { height: 8px; overflow: hidden; border: 1.5px solid var(--ink); background: #fff; }
+.liquidity-progress i { display: block; height: 100%; background: var(--blue); }
+
+@media (pointer: coarse) {
+  .wallet-button, .feedback-toggle, .text-button, .back-button, .moment-nav > a, .picker-heading > button { min-height: 44px; }
+  .wallet-button { height: 44px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
 
 /* Reviewer-facing GenLayer proof route. */

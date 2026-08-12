@@ -1,0 +1,31 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  contracts-and-app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.15.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: pnpm
+      - run: pip install -r requirements.txt
+      - run: pnpm install --frozen-lockfile
+      - run: genvm-lint check contracts/match_round_resolver.py
+      - run: genvm-lint check contracts/moment_grid_game.py
+      - run: pytest tests/direct -q
+      - run: pnpm --filter @moment-grid/scoring test
+      - run: pnpm --filter web lint
+      - run: pnpm --filter web typecheck
+      - run: pnpm --filter web build
