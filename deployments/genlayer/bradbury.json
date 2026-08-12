@@ -26,8 +26,31 @@
       "schema_verified": true,
       "version_verified": true
     },
-    "active_round_id": null,
-    "rounds": {}
+    "active_round_id": "epl-2026-08-21-arsenal-coventry-v2",
+    "rounds": {
+      "epl-2026-08-21-arsenal-coventry-v2": {
+        "match_id": "epl-arsenal-coventry-2026-08-21",
+        "home_team": "Arsenal",
+        "away_team": "Coventry City",
+        "competition": "Premier League",
+        "match_date": "2026-08-21",
+        "source_urls": [
+          "https://www.espn.com/soccer/match/_/gameId/401879301/coventry-city-arsenal",
+          "https://www.thesportsdb.com/event/2494000-arsenal-vs-coventry-city"
+        ],
+        "lock_at": "2026-08-21T18:45:00Z",
+        "kickoff_at": "2026-08-21T19:00:00Z",
+        "resolve_not_before": "2026-08-21T21:30:00Z",
+        "refund_at": "2026-08-25T19:00:00Z",
+        "minimum_participants": 2,
+        "minimum_total_stake_wei": "20000000000000000000",
+        "minimum_unique_grids": 2,
+        "status": "OPEN",
+        "resolver_status": "PENDING",
+        "resolver_registration_transaction": "0xb04cc69edca894a1c08f0bb1be388da19edb693c84e1647f1716bbc13c466c1f",
+        "game_round_creation_transaction": "0xa19e18caf684dd72483c180b753827684a7fb32e9b4c515e496c416d6e06f694"
+      }
+    }
   },
   "legacy_v1": {
     "game": {
@@ -77,6 +100,6 @@
   "notes": [
     "V2 deployments were accepted with successful execution and AGREE validator results; Bradbury did not advance either receipt beyond status 5 during the finality verification window.",
     "The historical V1 replay remains recorded for auditability but must not accept new entries.",
-    "No V2 round is active. Register a genuine future fixture with two distinct allowlisted publishers before setting NEXT_PUBLIC_GENLAYER_GAME_ROUND_ID."
+    "The active V2 round uses match-specific ESPN and TheSportsDB records for the 21 August 2026 Arsenal versus Coventry City fixture."
   ]
 }

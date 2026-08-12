@@ -49,6 +49,8 @@ const SCREEN_ORDER: Screen[] = ["build", "lock", "watch", "reveal", "reward"];
 const TIER_NAMES = ["Common", "Medium", "Rare"];
 const TIER_CODES = ["C", "M", "R"];
 const WINDOW_LABELS = ["0–30", "30–60", "60–90+"];
+const LIVE_FIXTURE = { home: "Arsenal", away: "Coventry City", homeCode: "ARS", awayCode: "COV" } as const;
+const DEMO_FIXTURE = { home: "Arsenal", away: "Chelsea", homeCode: "ARS", awayCode: "CHE" } as const;
 
 const LINE_PATHS = [
   { cells: [0, 1, 2], d: "M 16.667 16.667 L 83.333 16.667" },
@@ -77,6 +79,7 @@ export function GameShell({ roundId }: { roundId?: string }) {
   const { snapshot, error: replayError, start: startMatch, reset: resetMatch } = useMatchSource();
   const genLayer = useGenLayerResolution();
   const onchainGame = useOnchainGame(roundId);
+  const fixture = onchainGame.round?.match_id === "epl-arsenal-coventry-2026-08-21" ? LIVE_FIXTURE : DEMO_FIXTURE;
   const [stakeInput, setStakeInput] = useState(MINIMUM_STAKE_GEN);
   const [revealed, setRevealed] = useState(false);
   const [feedbackEnabled, setFeedbackEnabled] = useState(true);
@@ -230,7 +233,7 @@ export function GameShell({ roundId }: { roundId?: string }) {
           {screen === "lock" && (
             <LockScreen grid={grid as PredictionId[]} error={onchainGame.error || genLayer.error || replayError} genLayerConfigured={genLayer.configured} phase={genLayer.phase} busy={onchainGame.busy || genLayer.busy} onchainGame={onchainGame} stakeInput={stakeInput} onStakeInput={setStakeInput} onBack={() => { playFeedback("tap"); setScreen("build"); }} onLock={startRound} />
           )}
-          {screen === "watch" && <WatchScreen snapshot={snapshot} error={onchainGame.error || genLayer.error || replayError} phase={genLayer.phase} transactionHash={onchainGame.transactionHash || genLayer.transactionHash} busy={onchainGame.busy || genLayer.busy} onchain={onchainGame.configured} onEvent={handleEventFeedback} onContinue={async () => { if (onchainGame.configured) await onchainGame.refresh(); else if (!(await genLayer.resolve(grid as PredictionId[]))) return; playFeedback("confirm"); setScreen("reveal"); }} />}
+          {screen === "watch" && <WatchScreen snapshot={snapshot} fixture={fixture} error={onchainGame.error || genLayer.error || replayError} phase={genLayer.phase} transactionHash={onchainGame.transactionHash || genLayer.transactionHash} busy={onchainGame.busy || genLayer.busy} onchain={onchainGame.configured} onEvent={handleEventFeedback} onContinue={async () => { if (onchainGame.configured) await onchainGame.refresh(); else if (!(await genLayer.resolve(grid as PredictionId[]))) return; playFeedback("confirm"); setScreen("reveal"); }} />}
           {screen === "reveal" && (
             <RevealScreen
               grid={grid as PredictionId[]}
@@ -307,9 +310,10 @@ function Progress({ screen }: { screen: Screen }) {
 
 function MatchCard({ game }: { game?: OnchainGame }) {
   const round = game?.round;
+  const fixture = round?.match_id === "epl-arsenal-coventry-2026-08-21" ? LIVE_FIXTURE : DEMO_FIXTURE;
   return (
     <div className="match-card">
-      <div><span className="eyebrow">{round ? `On-chain round · ${round.round_id}` : "Interactive evidence demo"}</span><strong>{round?.match_id ?? "ARS-CHE REPLAY"}</strong></div>
+      <div><span className="eyebrow">{round ? "On-chain round · Bradbury V2" : "Interactive evidence demo"}</span><strong>{fixture.homeCode} · {fixture.home} vs {fixture.away} · {fixture.awayCode}</strong></div>
       <div className="match-meta"><span>{game?.configured ? "Bradbury testnet" : "Local replay"}</span><div className="match-window"><Clock3 size={13} /> {round?.kickoff_at ? new Date(round.kickoff_at).toLocaleString() : "2 min / 90′"}</div></div>
     </div>
   );
@@ -457,7 +461,7 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
   );
 }
 
-function WatchScreen({ snapshot, error, phase, transactionHash, busy, onchain, onEvent, onContinue }: { snapshot: MatchSnapshot; error: string; phase: GenLayerResolutionPhase; transactionHash: `0x${string}` | null; busy: boolean; onchain: boolean; onEvent: (event: MatchEvent) => void; onContinue: () => void | Promise<void> }) {
+function WatchScreen({ snapshot, fixture, error, phase, transactionHash, busy, onchain, onEvent, onContinue }: { snapshot: MatchSnapshot; fixture: typeof LIVE_FIXTURE | typeof DEMO_FIXTURE; error: string; phase: GenLayerResolutionPhase; transactionHash: `0x${string}` | null; busy: boolean; onchain: boolean; onEvent: (event: MatchEvent) => void; onContinue: () => void | Promise<void> }) {
   const [reaction, setReaction] = useState<MatchEvent | null>(null);
   const previousEventCount = useRef(snapshot.events.length);
   const minute = Math.min(90, Math.floor(snapshot.virtualMinute));
@@ -485,7 +489,7 @@ function WatchScreen({ snapshot, error, phase, transactionHash, busy, onchain, o
   return (
     <div className="screen-stack watch-screen">
       {reaction && <div className={`match-reaction reaction-${reactionTone}`} role="status" aria-live="assertive"><span>{Math.floor(reaction.minute)}′</span><div className="reaction-glyph"><EventGlyph eventType={reaction.eventType} /></div><strong>{EVENT_LABELS[reaction.eventType]}</strong><small>Match moment</small></div>}
-      <div className="watch-head"><div><span className="step-label live-label"><span /> Live replay</span><h1>{minute}:{String(seconds).padStart(2, "0")}</h1></div><div className="score-bug" aria-label={`Arsenal ${score.home}, Chelsea ${score.away}`}><span>ARS</span><strong>{score.home}—{score.away}</strong><span>CHE</span></div></div>
+      <div className="watch-head"><div><span className="step-label live-label"><span /> Live replay</span><h1>{minute}:{String(seconds).padStart(2, "0")}</h1></div><div className="score-bug" aria-label={`${fixture.home} ${score.home}, ${fixture.away} ${score.away}`}><span>{fixture.homeCode}</span><strong>{score.home}—{score.away}</strong><span>{fixture.awayCode}</span></div></div>
       <div className="timeline">
         {WINDOW_LABELS.map((window, index) => (
           <div className={`timeline-window ${index < activeWindow || snapshot.phase === "complete" ? "is-done" : ""} ${index === activeWindow && snapshot.phase !== "complete" ? "is-live" : ""}`} key={window}>

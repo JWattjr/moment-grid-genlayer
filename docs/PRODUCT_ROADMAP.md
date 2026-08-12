@@ -24,7 +24,8 @@ rolling jackpot.
 
 - [x] Deploy fresh V2 game and resolver contracts and verify both report
   version `2.0.0` with the expected schemas.
-- Register a real upcoming fixture with two distinct authoritative URLs.
+- [x] Register the 21 August 2026 Arsenal–Coventry fixture with match-specific
+  ESPN and TheSportsDB URLs.
 - Run two-wallet end-to-end rehearsal: enter distinct grids, resolve after full
   time, redispatch if needed, process, claim, and separately prove refund mode.
 - [x] Record accepted deployment receipts in `deployments/genlayer/`.
