@@ -58,12 +58,14 @@ The V2 contract layer is implemented and locally verified:
 
 The complete trust boundary and payout rules are documented in [`docs/ONCHAIN_GAME.md`](docs/ONCHAIN_GAME.md). These contracts are intended for persistent Testnet Bradbury; the existing Studionet resolver remains the live reviewer proof.
 
-The legacy V1 weighted-pool game is deployed on Testnet Bradbury at
-`0xb0D73f47583617F0f06924f24D47137BEfEa4708`. Its accepted deployment and
-live 10 GEN allocation check are recorded in
+The V2 game and resolver are deployed on Testnet Bradbury at
+`0x1D87C32c1A0D65C083ce322608D284E5767b8408` and
+`0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB`. Both deployments returned
+successful `2.0.0` contracts with validator agreement; their accepted receipts
+and pending-finality status are recorded in
 [`deployments/genlayer/bradbury.json`](deployments/genlayer/bradbury.json).
-The web app treats V1 as view-only. V2 needs a fresh deployment and a real
-future fixture before new entries are re-enabled.
+The V1 deployment remains in that manifest as read-only history. New entries
+stay disabled until a genuine future fixture is registered in both V2 contracts.
 
 ## Live GenLayer Proof
 

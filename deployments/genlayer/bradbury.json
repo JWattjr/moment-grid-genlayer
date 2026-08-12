@@ -3,51 +3,80 @@
   "chain_id": 4221,
   "rpc": "https://rpc-bradbury.genlayer.com",
   "owner_address": "0xdb433ff614bdd1ece21aa97221c3e0a7ecf79c92",
-  "game": {
-    "contract": "MomentGridGame",
-    "contract_address": "0xb0D73f47583617F0f06924f24D47137BEfEa4708",
-    "deployment_transaction": "0x2a52328d63abd80c72487cc8585f1866d413c3461afdff9229d65cf09c8fd22f",
-    "deployment_status": "ACCEPTED",
-    "deployment_execution": "FINISHED_WITH_RETURN",
-    "schema_verified": true,
-    "stake_quote_verified": {
-      "stake_amount_wei": "10000000000000000000",
-      "common_per_cell_wei": "500000000000000000",
-      "medium_per_cell_wei": "1000000000000000000",
-      "rare_per_cell_wei": "1500000000000000000",
-      "jackpot_wei": "500000000000000000",
-      "revenue_wei": "500000000000000000",
-      "pool_total_wei": "9000000000000000000"
-    }
+  "v2": {
+    "game": {
+      "contract": "MomentGridGame",
+      "version": "2.0.0",
+      "contract_address": "0x1D87C32c1A0D65C083ce322608D284E5767b8408",
+      "deployment_transaction": "0xd069054a4292d7ba1c16156741c409eddbc6cbb6d009d4be5a79902ede86c543",
+      "deployment_status": "ACCEPTED_PENDING_FINALITY",
+      "deployment_execution": "FINISHED_WITH_RETURN",
+      "validator_result": "AGREE",
+      "schema_verified": true,
+      "version_verified": true
+    },
+    "round_resolver": {
+      "contract": "MatchRoundResolver",
+      "version": "2.0.0",
+      "contract_address": "0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB",
+      "deployment_transaction": "0xd379470c53b50f29b60732d25b59ff4e0f1030df997df888595bcf45791195d6",
+      "deployment_status": "ACCEPTED_PENDING_FINALITY",
+      "deployment_execution": "FINISHED_WITH_RETURN",
+      "validator_result": "AGREE",
+      "schema_verified": true,
+      "version_verified": true
+    },
+    "active_round_id": null,
+    "rounds": {}
   },
-  "round_resolver": {
-    "contract": "MatchRoundResolver",
-    "contract_address": "0xD59BF31968222fEe59F69B5773927EF710cf4d11",
-    "deployment_transaction": "0xa9112d9eb67d1d26e1647623a93a21fb7e8b672e824f5a0ec527126cd0b937aa",
-    "schema_verified": true,
-    "registered_round_count": 1
-  },
-  "rounds": {
-    "epl-2023-05-02-arsenal-chelsea-replay-v2": {
-      "match_id": "epl-arsenal-chelsea-2023-05-02",
-      "home_team": "Arsenal",
-      "away_team": "Chelsea",
-      "competition": "Premier League",
-      "match_date": "2023-05-02",
-      "source_urls": [
-        "https://www.bbc.co.uk/sport/football/65382202",
-        "https://www.espn.co.uk/football/match/_/gameId/638156/chelsea-arsenal"
-      ],
-      "lock_at": "2026-08-15T18:00:00Z",
-      "refund_at": "2026-08-18T18:00:00Z",
-      "status": "OPEN",
-      "resolver_status": "PENDING",
-      "resolver_registration_transaction": "0xb1bdcdd0af2d5aee5895b2ee74c59000cb76b2ceb5bfe55b070c90844986fb79",
-      "game_round_creation_transaction": "0x38eb873a6a31b2f344b3115e6110b6bd4940bb4f6bea9b48dcac9e5c7f2f3884"
+  "legacy_v1": {
+    "game": {
+      "contract": "MomentGridGame",
+      "contract_address": "0xb0D73f47583617F0f06924f24D47137BEfEa4708",
+      "deployment_transaction": "0x2a52328d63abd80c72487cc8585f1866d413c3461afdff9229d65cf09c8fd22f",
+      "deployment_status": "ACCEPTED",
+      "deployment_execution": "FINISHED_WITH_RETURN",
+      "schema_verified": true,
+      "stake_quote_verified": {
+        "stake_amount_wei": "10000000000000000000",
+        "common_per_cell_wei": "500000000000000000",
+        "medium_per_cell_wei": "1000000000000000000",
+        "rare_per_cell_wei": "1500000000000000000",
+        "jackpot_wei": "500000000000000000",
+        "revenue_wei": "500000000000000000",
+        "pool_total_wei": "9000000000000000000"
+      }
+    },
+    "round_resolver": {
+      "contract": "MatchRoundResolver",
+      "contract_address": "0xD59BF31968222fEe59F69B5773927EF710cf4d11",
+      "deployment_transaction": "0xa9112d9eb67d1d26e1647623a93a21fb7e8b672e824f5a0ec527126cd0b937aa",
+      "schema_verified": true,
+      "registered_round_count": 1
+    },
+    "rounds": {
+      "epl-2023-05-02-arsenal-chelsea-replay-v2": {
+        "match_id": "epl-arsenal-chelsea-2023-05-02",
+        "home_team": "Arsenal",
+        "away_team": "Chelsea",
+        "competition": "Premier League",
+        "match_date": "2023-05-02",
+        "source_urls": [
+          "https://www.bbc.co.uk/sport/football/65382202",
+          "https://www.espn.co.uk/football/match/_/gameId/638156/chelsea-arsenal"
+        ],
+        "lock_at": "2026-08-15T18:00:00Z",
+        "refund_at": "2026-08-18T18:00:00Z",
+        "status": "OPEN",
+        "resolver_status": "PENDING",
+        "resolver_registration_transaction": "0xb1bdcdd0af2d5aee5895b2ee74c59000cb76b2ceb5bfe55b070c90844986fb79",
+        "game_round_creation_transaction": "0x38eb873a6a31b2f344b3115e6110b6bd4940bb4f6bea9b48dcac9e5c7f2f3884"
+      }
     }
   },
   "notes": [
-    "The replacement game deployment contains the 10 GEN minimum, rarity-weighted pools, rolling jackpot, and settled-only protocol revenue.",
-    "The approved Arsenal versus Chelsea historical replay is registered in both contracts and is the active public demo round."
+    "V2 deployments were accepted with successful execution and AGREE validator results; Bradbury did not advance either receipt beyond status 5 during the finality verification window.",
+    "The historical V1 replay remains recorded for auditability but must not accept new entries.",
+    "No V2 round is active. Register a genuine future fixture with two distinct allowlisted publishers before setting NEXT_PUBLIC_GENLAYER_GAME_ROUND_ID."
   ]
 }
