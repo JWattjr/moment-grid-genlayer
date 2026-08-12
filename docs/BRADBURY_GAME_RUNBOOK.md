@@ -122,3 +122,20 @@ batch, or activate an eligible refund.
 scope and adding `GENLAYER_KEEPER_PRIVATE_KEY` as an Actions secret. Use a
 dedicated, minimally funded testnet account. Never reuse an owner or mainnet
 key, and remove the schedule before any real-value launch.
+
+## 7. Isolated payout rehearsal
+
+The `qa-2026-08-13-motagua-cartagines-v1` round is a two-wallet Bradbury QA
+round backed by a real fixture. It is not organic liquidity and must not become
+the public active round. Operate it by overriding only the server-side bot
+process:
+
+```powershell
+$env:GENLAYER_GAME_ROUND_ID="qa-2026-08-13-motagua-cartagines-v1"
+pnpm bot:keeper:dry
+```
+
+The round locks at `2026-08-13T00:45:00Z`, opens evidence resolution at
+`2026-08-13T03:30:00Z`, and becomes refundable at `2026-08-14T06:00:00Z` if
+settlement does not complete. After settlement, claim once from each QA wallet
+and record pre/post balances plus successful transaction execution receipts.

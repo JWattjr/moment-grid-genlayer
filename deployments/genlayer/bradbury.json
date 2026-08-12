@@ -63,6 +63,42 @@
         },
         "resolver_registration_transaction": "0xb04cc69edca894a1c08f0bb1be388da19edb693c84e1647f1716bbc13c466c1f",
         "game_round_creation_transaction": "0xa19e18caf684dd72483c180b753827684a7fb32e9b4c515e496c416d6e06f694"
+      },
+      "qa-2026-08-13-motagua-cartagines-v1": {
+        "purpose": "Isolated Bradbury stake-to-settlement-to-claim rehearsal; not organic liquidity",
+        "match_id": "qa-concacaf-motagua-cartagines-2026-08-13",
+        "home_team": "Motagua",
+        "away_team": "Cartagines",
+        "competition": "CONCACAF Central American Cup",
+        "match_date": "2026-08-13",
+        "source_urls": [
+          "https://www.thesportsdb.com/event/2479172-motagua-vs-cartagines",
+          "https://www.espn.com/soccer/team/fixtures/_/id/7242/fc-motagua"
+        ],
+        "lock_at": "2026-08-13T00:45:00Z",
+        "kickoff_at": "2026-08-13T01:00:00Z",
+        "resolve_not_before": "2026-08-13T03:30:00Z",
+        "refund_at": "2026-08-14T06:00:00Z",
+        "minimum_participants": 2,
+        "minimum_total_stake_wei": "20000000000000000000",
+        "minimum_unique_grids": 2,
+        "status": "OPEN",
+        "resolver_status": "PENDING",
+        "participant_count": 2,
+        "unique_grid_count": 2,
+        "liquidity_ready": true,
+        "total_escrow_wei": "20000000000000000000",
+        "jackpot_pool_wei": "1000000000000000000",
+        "owner_grid_moment_ids": [1, 4, 7, 10, 13, 16, 19, 22, 25],
+        "test_bot_grid_moment_ids": [3, 6, 9, 12, 15, 18, 21, 24, 27],
+        "test_bot_funding_transaction": "0x24216bdf259e1f4ecbb5d1170eb12a243e079c5947cbff3cdfddc375a94a0a7b",
+        "resolver_registration_transaction": "0x99d76ada9da026c1b8fc547b3a156a95d8f08f678e67dd4d948434af725d5ef2",
+        "game_round_creation_transaction": "0x063b839141ab72cd0fd0b226525c850fe82969aeecb1c8c9c3b39aaf614b3126",
+        "failed_registration_transactions": [
+          "0xeda7ebc1d343602314122cd7351ca306ea7ee9695e201067b1e14fdf75f95a3f",
+          "0x9bd0f30b0efc9ab8e662691a489185e2497f29b5842e22a1dfa6fbb83f935b6c",
+          "0x83f4f69053900f2cb078f01a248f3e2d33104d5bd88d1dd5ba0c6ecd62969138"
+        ]
       }
     }
   },
