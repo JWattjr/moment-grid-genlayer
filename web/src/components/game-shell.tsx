@@ -44,13 +44,37 @@ type Screen = "build" | "lock" | "watch" | "reveal" | "reward";
 type Grid = Array<PredictionId | null>;
 type FeedbackCue = "tap" | "confirm" | "lock" | "event" | "reveal" | "reward";
 type OnchainGame = ReturnType<typeof useOnchainGame>;
+type FixtureLabel = { home: string; away: string; homeCode: string; awayCode: string };
 
 const SCREEN_ORDER: Screen[] = ["build", "lock", "watch", "reveal", "reward"];
 const TIER_NAMES = ["Common", "Medium", "Rare"];
 const TIER_CODES = ["C", "M", "R"];
 const WINDOW_LABELS = ["0–30", "30–60", "60–90+"];
-const LIVE_FIXTURE = { home: "Arsenal", away: "Coventry City", homeCode: "ARS", awayCode: "COV" } as const;
-const DEMO_FIXTURE = { home: "Arsenal", away: "Chelsea", homeCode: "ARS", awayCode: "CHE" } as const;
+const LIVE_FIXTURE: FixtureLabel = { home: "Arsenal", away: "Coventry City", homeCode: "ARS", awayCode: "COV" };
+const QA_FIXTURE: FixtureLabel = { home: "Motagua", away: "Cartagines", homeCode: "MOT", awayCode: "CAR" };
+const DEMO_FIXTURE: FixtureLabel = { home: "Arsenal", away: "Chelsea", homeCode: "ARS", awayCode: "CHE" };
+const REGISTERED_FIXTURE: FixtureLabel = { home: "Registered home", away: "Registered away", homeCode: "HOME", awayCode: "AWAY" };
+const FIXTURES_BY_ID: Record<string, FixtureLabel> = {
+  "epl-2026-08-21-arsenal-coventry-v2": LIVE_FIXTURE,
+  "epl-arsenal-coventry-2026-08-21": LIVE_FIXTURE,
+  "qa-2026-08-13-motagua-cartagines-v1": QA_FIXTURE,
+  "qa-concacaf-motagua-cartagines-2026-08-13": QA_FIXTURE,
+  "epl-2023-05-02-arsenal-chelsea-replay-v2": DEMO_FIXTURE,
+  "epl-arsenal-chelsea-2023-05-02": DEMO_FIXTURE,
+};
+
+function fixtureForGame(game: OnchainGame): FixtureLabel {
+  if (!game.configured) return DEMO_FIXTURE;
+  return FIXTURES_BY_ID[game.round?.match_id ?? game.config.roundId] ?? REGISTERED_FIXTURE;
+}
+
+function eventLabel(eventType: MatchEventType, fixture: FixtureLabel): string {
+  if (eventType === "HOME_SHOT") return `${fixture.home} shot`;
+  if (eventType === "AWAY_SHOT") return `${fixture.away} shot`;
+  if (eventType === "HOME_GOAL") return `${fixture.home} goal`;
+  if (eventType === "AWAY_GOAL") return `${fixture.away} goal`;
+  return EVENT_LABELS[eventType];
+}
 
 const LINE_PATHS = [
   { cells: [0, 1, 2], d: "M 16.667 16.667 L 83.333 16.667" },
@@ -79,7 +103,7 @@ export function GameShell({ roundId }: { roundId?: string }) {
   const { snapshot, error: replayError, start: startMatch, reset: resetMatch } = useMatchSource();
   const genLayer = useGenLayerResolution();
   const onchainGame = useOnchainGame(roundId);
-  const fixture = onchainGame.round?.match_id === "epl-arsenal-coventry-2026-08-21" ? LIVE_FIXTURE : DEMO_FIXTURE;
+  const fixture = fixtureForGame(onchainGame);
   const [stakeInput, setStakeInput] = useState(MINIMUM_STAKE_GEN);
   const [revealed, setRevealed] = useState(false);
   const [feedbackEnabled, setFeedbackEnabled] = useState(true);
@@ -191,7 +215,11 @@ export function GameShell({ roundId }: { roundId?: string }) {
     playFeedback("lock");
     if (onchainGame.configured) {
       if (!onchainGame.entry && !(await onchainGame.enter(grid as PredictionId[], stakeInput))) return;
-    } else if (!(await genLayer.lock(grid as PredictionId[]))) return;
+      await onchainGame.refresh();
+      setScreen("build");
+      return;
+    }
+    if (!(await genLayer.lock(grid as PredictionId[]))) return;
     await startMatch();
     setScreen("watch");
   };
@@ -271,7 +299,7 @@ function FirstPlayTutorial({ onAdvance, onClose }: { onAdvance: () => void; onCl
   const [step, setStep] = useState(0);
   const steps = [
     { icon: Grid3X3, tag: "01 · Build", title: "Fill all nine calls.", copy: "Columns are match windows. Rows are rarity tiers. Every cell needs one prediction." },
-    { icon: LockKeyhole, tag: "02 · Lock", title: "Commit to your calls.", copy: "Lock the grid before the replay begins so every result is scored against the same picks." },
+    { icon: LockKeyhole, tag: "02 · Lock", title: "Commit to your calls.", copy: "Lock the grid before kickoff. The finalized signed entry becomes the immutable scoring input." },
     { icon: Trophy, tag: "03 · Resolve", title: "Let consensus settle the moment.", copy: "GenLayer validators evaluate public evidence; deterministic scoring completes your rows, columns, and diagonals." },
   ] as const;
   const current = steps[step];
@@ -310,11 +338,12 @@ function Progress({ screen }: { screen: Screen }) {
 
 function MatchCard({ game }: { game?: OnchainGame }) {
   const round = game?.round;
-  const fixture = round?.match_id === "epl-arsenal-coventry-2026-08-21" ? LIVE_FIXTURE : DEMO_FIXTURE;
+  const configured = Boolean(game?.configured);
+  const fixture = game ? fixtureForGame(game) : DEMO_FIXTURE;
   return (
     <div className="match-card">
-      <div><span className="eyebrow">{round ? "On-chain round · Bradbury V2" : "Interactive evidence demo"}</span><strong>{fixture.homeCode} · {fixture.home} vs {fixture.away} · {fixture.awayCode}</strong></div>
-      <div className="match-meta"><span>{game?.configured ? "Bradbury testnet" : "Local replay"}</span><div className="match-window"><Clock3 size={13} /> {round?.kickoff_at ? new Date(round.kickoff_at).toLocaleString() : "2 min / 90′"}</div></div>
+      <div><span className="eyebrow">{configured ? "On-chain round · Bradbury V2" : "Interactive evidence demo"}</span><strong>{fixture.homeCode} · {fixture.home} vs {fixture.away} · {fixture.awayCode}</strong></div>
+      <div className="match-meta"><span>{configured ? "Bradbury testnet" : "Local replay"}</span><div className="match-window"><Clock3 size={13} /> {round?.kickoff_at ? new Date(round.kickoff_at).toLocaleString() : configured ? "Reading kickoff…" : "2 min / 90′"}</div></div>
     </div>
   );
 }
@@ -429,7 +458,7 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
     <div className="screen-stack">
       <button className="back-button" onClick={onBack}><ArrowLeft size={16} /> Edit grid</button>
       <div><span className="step-label">02 · Lock</span><h1>Commit to your calls.</h1></div>
-      <p className="lede">Predictions cannot change after the replay begins. Registered match moments are verified before play.</p>
+      <p className="lede">{onchainGame.configured ? "Predictions cannot change after the signed entry finalizes. The registered match and evidence window are fixed before play." : "Predictions cannot change after the replay begins. Registered match moments are verified before play."}</p>
       <ResolutionJourney stage="locked" />
       {onchainGame.configured ? (
         <div className="stake-card" aria-label="On-chain stake allocation">
@@ -456,12 +485,12 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
       {confirmed && !onchainGame.entry && <div className="confirmation-card" role="alert"><strong>Confirm your maximum loss</strong><p>You are committing {stakeInput} testnet GEN to nine transparent pari-mutuel pools. Picks cannot be edited after finalization.</p></div>}
       {!onchainGame.configured && genLayerConfigured && genLayerResolverConfig.moment && grid.includes(genLayerResolverConfig.moment.prediction_id as PredictionId) && <div className="privacy-note"><ShieldCheck size={16} /><span>{genLayerResolverConfig.moment.moment_statement} is pre-registered on {genLayerResolverConfig.network} · {phase === "READY" ? "ready" : "verified at lock"}.</span></div>}
       {error && <p className="error-message">{error}</p>}
-      <button className="primary-button pulse-button" onClick={requestLock} disabled={busy || (onchainGame.configured && !onchainGame.entry && (!allocation || !v2Ready))}>{busy ? (onchainGame.configured ? `${onchainGame.transactionStage.toLowerCase()}…` : "Checking GenLayer registration…") : onchainGame.entry ? "Entry secured · start replay" : onchainGame.configured ? confirmed ? `Confirm & sign ${stakeInput || "0"} GEN` : `Review ${stakeInput || "0"} GEN stake` : "Lock & start replay"} <LockKeyhole size={17} /></button>
+      <button className="primary-button pulse-button" onClick={requestLock} disabled={busy || (onchainGame.configured && !onchainGame.entry && (!allocation || !v2Ready))}>{busy ? (onchainGame.configured ? `${onchainGame.transactionStage.toLowerCase()}…` : "Checking GenLayer registration…") : onchainGame.entry ? "Entry secured · view position" : onchainGame.configured ? confirmed ? `Confirm & sign ${stakeInput || "0"} GEN` : `Review ${stakeInput || "0"} GEN stake` : "Lock & start replay"} <LockKeyhole size={17} /></button>
     </div>
   );
 }
 
-function WatchScreen({ snapshot, fixture, error, phase, transactionHash, busy, onchain, onEvent, onContinue }: { snapshot: MatchSnapshot; fixture: typeof LIVE_FIXTURE | typeof DEMO_FIXTURE; error: string; phase: GenLayerResolutionPhase; transactionHash: `0x${string}` | null; busy: boolean; onchain: boolean; onEvent: (event: MatchEvent) => void; onContinue: () => void | Promise<void> }) {
+function WatchScreen({ snapshot, fixture, error, phase, transactionHash, busy, onchain, onEvent, onContinue }: { snapshot: MatchSnapshot; fixture: FixtureLabel; error: string; phase: GenLayerResolutionPhase; transactionHash: `0x${string}` | null; busy: boolean; onchain: boolean; onEvent: (event: MatchEvent) => void; onContinue: () => void | Promise<void> }) {
   const [reaction, setReaction] = useState<MatchEvent | null>(null);
   const previousEventCount = useRef(snapshot.events.length);
   const minute = Math.min(90, Math.floor(snapshot.virtualMinute));
@@ -488,8 +517,8 @@ function WatchScreen({ snapshot, fixture, error, phase, transactionHash, busy, o
   const reactionTone = reaction && ["HOME_GOAL", "AWAY_GOAL", "SUBSTITUTE_GOAL"].includes(reaction.eventType) ? "goal" : reaction && ["YELLOW_CARD", "RED_CARD", "PENALTY_AWARDED", "VAR_REVIEW"].includes(reaction.eventType) ? "alert" : "pulse";
   return (
     <div className="screen-stack watch-screen">
-      {reaction && <div className={`match-reaction reaction-${reactionTone}`} role="status" aria-live="assertive"><span>{Math.floor(reaction.minute)}′</span><div className="reaction-glyph"><EventGlyph eventType={reaction.eventType} /></div><strong>{EVENT_LABELS[reaction.eventType]}</strong><small>Match moment</small></div>}
-      <div className="watch-head"><div><span className="step-label live-label"><span /> Live replay</span><h1>{minute}:{String(seconds).padStart(2, "0")}</h1></div><div className="score-bug" aria-label={`${fixture.home} ${score.home}, ${fixture.away} ${score.away}`}><span>{fixture.homeCode}</span><strong>{score.home}—{score.away}</strong><span>{fixture.awayCode}</span></div></div>
+      {reaction && <div className={`match-reaction reaction-${reactionTone}`} role="status" aria-live="assertive"><span>{Math.floor(reaction.minute)}′</span><div className="reaction-glyph"><EventGlyph eventType={reaction.eventType} /></div><strong>{eventLabel(reaction.eventType, fixture)}</strong><small>Match moment</small></div>}
+      <div className="watch-head"><div><span className="step-label live-label"><span /> {onchain ? "Practice preview" : "Live replay"}</span><h1>{minute}:{String(seconds).padStart(2, "0")}</h1></div><div className="score-bug" aria-label={`${fixture.home} ${score.home}, ${fixture.away} ${score.away}`}><span>{fixture.homeCode}</span><strong>{score.home}—{score.away}</strong><span>{fixture.awayCode}</span></div></div>
       <div className="timeline">
         {WINDOW_LABELS.map((window, index) => (
           <div className={`timeline-window ${index < activeWindow || snapshot.phase === "complete" ? "is-done" : ""} ${index === activeWindow && snapshot.phase !== "complete" ? "is-live" : ""}`} key={window}>
@@ -498,7 +527,7 @@ function WatchScreen({ snapshot, fixture, error, phase, transactionHash, busy, o
         ))}
       </div>
       <div className="sealed-panel"><div className="sealed-orbit"><LockKeyhole size={26} /><span /></div><strong>Your predictions are locked</strong><p>Picks and pool backing are transparent on-chain. Validator-agreed evidence settles the grid after full time.</p></div>
-      <div className="feed-section"><div className="section-heading"><span>Match pulse</span><small>{snapshot.events.length} events</small></div><div className="event-feed">{snapshot.events.length === 0 && <div className="empty-event">Waiting for kickoff…</div>}{[...snapshot.events].reverse().slice(0, 4).map((event, index) => <EventRow event={event} newest={index === 0} key={`${event.minute}-${event.eventType}`} />)}</div></div>
+      <div className="feed-section"><div className="section-heading"><span>{onchain ? "Illustrative match pulse" : "Match pulse"}</span><small>{snapshot.events.length} events</small></div><div className="event-feed">{snapshot.events.length === 0 && <div className="empty-event">Waiting for kickoff…</div>}{[...snapshot.events].reverse().slice(0, 4).map((event, index) => <EventRow event={event} fixture={fixture} newest={index === 0} key={`${event.minute}-${event.eventType}`} />)}</div></div>
       {transactionHash && <div className="privacy-note"><ShieldCheck size={16} /><span>{onchain ? "Bradbury entry" : "Studionet transaction"} {transactionHash.slice(0, 10)}…{transactionHash.slice(-6)} · {onchain ? "accepted" : phase.toLowerCase()}</span></div>}
       {error && <p className="error-message">{error}</p>}
       {snapshot.phase === "complete" ? <button className="primary-button" onClick={onContinue} disabled={busy}>{busy ? "Reading GenLayer state…" : onchain ? "Full time · preview result" : "Full time · resolve & reveal"} <Eye size={18} /></button> : <div className="countdown"><Clock3 size={14} /> {Math.ceil(snapshot.remainingSeconds)}s until reveal</div>}
@@ -506,9 +535,9 @@ function WatchScreen({ snapshot, fixture, error, phase, transactionHash, busy, o
   );
 }
 
-function EventRow({ event, newest }: { event: MatchEvent; newest: boolean }) {
+function EventRow({ event, fixture, newest }: { event: MatchEvent; fixture: FixtureLabel; newest: boolean }) {
   return (
-    <div className={`event-row ${newest ? "is-new" : ""}`}><span className="event-minute">{Math.floor(event.minute)}′</span><span className="event-glyph"><EventGlyph eventType={event.eventType} /></span><strong>{EVENT_LABELS[event.eventType]}</strong>{newest && <small>just now</small>}</div>
+    <div className={`event-row ${newest ? "is-new" : ""}`}><span className="event-minute">{Math.floor(event.minute)}′</span><span className="event-glyph"><EventGlyph eventType={event.eventType} /></span><strong>{eventLabel(event.eventType, fixture)}</strong>{newest && <small>just now</small>}</div>
   );
 }
 
