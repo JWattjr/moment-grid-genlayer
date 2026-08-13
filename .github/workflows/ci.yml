@@ -22,6 +22,8 @@ jobs:
           cache: pnpm
       - run: pip install -r requirements.txt
       - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter @moment-grid/scoring build
+      - run: genvm-lint check contracts/match_moment_resolver.py
       - run: genvm-lint check contracts/match_round_resolver.py
       - run: genvm-lint check contracts/moment_grid_game.py
       - run: pytest tests/direct -q
