@@ -79,7 +79,7 @@ Do not add localhost links, private Vercel deployment URLs, fixture-only screens
 - [x] Direct Mode suite passes 46/46 tests.
 - [ ] Isolated Bradbury rehearsal exits safely: either settlement completes, or the confirmed `SOURCE_UNAVAILABLE` condition reaches timeout refunds; record both successful claims and before/after balances.
 - [ ] Optional 90-second public recording is uploaded and its URL is added as evidence.
-- [ ] Final production build is deployed and visually rechecked after the documentation/UI polish commit.
+- [x] Final production build is deployed and visually rechecked after the documentation/UI polish commit.
 
 The first unchecked item is the strongest remaining credibility gate. The video is optional but likely improves review speed and highlight potential. Do not spend a Portal Project slot until the production deployment and controlled lifecycle evidence are current.
 
