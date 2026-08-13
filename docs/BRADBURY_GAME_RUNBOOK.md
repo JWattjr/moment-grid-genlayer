@@ -137,5 +137,11 @@ pnpm bot:keeper:dry
 
 The round locks at `2026-08-13T00:45:00Z`, opens evidence resolution at
 `2026-08-13T03:30:00Z`, and becomes refundable at `2026-08-14T06:00:00Z` if
-settlement does not complete. After settlement, claim once from each QA wallet
-and record pre/post balances plus successful transaction execution receipts.
+settlement does not complete. The first post-match attempts returned
+`SOURCE_UNAVAILABLE`: TheSportsDB was reachable but the registered ESPN fixture
+page was not, so the resolver stayed `PENDING` and the game correctly remained
+unscored with 20 GEN escrowed. Do not force a verdict. Retry sparingly; if the
+condition persists, let the keeper activate refunds after the deadline, claim
+the full 10 GEN gross stake from each wallet, and record pre/post balances plus
+successful transaction execution receipts. If two-source evidence becomes
+available first, complete settlement and record the two payout claims instead.

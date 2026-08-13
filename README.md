@@ -62,9 +62,9 @@ Detailed accounting and failure behavior are in [docs/ONCHAIN_GAME.md](docs/ONCH
 | Contract version | `2.0.0` on both deployments |
 | Public round | `epl-2026-08-21-arsenal-coventry-v2` |
 | Public round state | OPEN · 2 entries · 2 unique grids · 20 GEN escrow · liquidity gate met |
-| Controlled QA round | `qa-2026-08-13-motagua-cartagines-v1` · two test wallets · settlement rehearsal in progress |
+| Controlled QA round | `qa-2026-08-13-motagua-cartagines-v1` · two test wallets · source-failure/refund rehearsal in progress |
 
-The public round contains one human-controlled entry and one explicitly labeled fixed-grid Test Bot. The QA round contains two controlled wallets and is never presented as organic liquidity. Exact addresses, inputs, receipts, failed-attempt audit history, and current state are recorded in [deployments/genlayer/bradbury.json](deployments/genlayer/bradbury.json).
+The public round contains one human-controlled entry and one explicitly labeled fixed-grid Test Bot. The QA round contains two controlled wallets and is never presented as organic liquidity. Its first post-match adjudications found only one of the two registered publishers reachable, returned `SOURCE_UNAVAILABLE`, and left the round unscored with all 20 GEN escrowed. The keeper is armed to activate full refunds at the deadline and claim both gross stakes. Exact addresses, inputs, receipts, failed-attempt audit history, and current state are recorded in [deployments/genlayer/bradbury.json](deployments/genlayer/bradbury.json).
 
 ### Reusable Studionet resolver proof
 

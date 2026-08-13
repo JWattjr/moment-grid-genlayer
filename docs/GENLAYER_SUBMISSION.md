@@ -1,6 +1,6 @@
 # GenLayer Project contribution package
 
-This is the ready-to-paste package for the Portal **Builder → Projects → Project** submission. Use the actual submission date shown by the Portal. Do not describe the isolated payout rehearsal as complete until both controlled wallets have claimed and the receipts are recorded.
+This is the ready-to-paste package for the Portal **Builder → Projects → Project** submission. Use the actual submission date shown by the Portal. Do not describe the isolated lifecycle rehearsal as complete until both controlled wallets have exited through successful settlement claims or full timeout refunds and the receipts are recorded.
 
 ## Form fields
 
@@ -15,10 +15,10 @@ Moment Grid — GenLayer-Settled Football Prediction Game
 The following copy is below the Portal's 1,000-character limit.
 
 ```text
-Moment Grid is a 3×3 football prediction game running end-to-end on GenLayer Bradbury. Players sign one payable transaction to lock nine match calls and stake native GEN across nine rarity-weighted pari-mutuel pools plus a rolling jackpot. After full time, a permissionless Intelligent Contract asks validators to read registered ESPN/TheSportsDB evidence, agree on bounded truth and coverage bitmaps, and send the finalized result to the game contract. Deterministic on-chain code scores grids, refunds unsupported calls, opens payouts, or returns full stakes when liquidity or evidence deadlines fail. The Next.js frontend handles wallet recovery, stake allocation, finalized entries, settlement, claims, rounds, standings, integrity, and safer-play disclosures. V2 is live on Bradbury with 10 GEN entries and a disclosed two-wallet payout rehearsal; the repo also includes settled Studionet TRUE/FALSE consensus proof, 46 direct contract tests, deployment receipts, and runbooks.
+Moment Grid is a 3×3 football prediction game running end-to-end on GenLayer Bradbury. Players sign one payable transaction to lock nine match calls and stake native GEN across nine rarity-weighted pari-mutuel pools plus a rolling jackpot. After full time, a permissionless Intelligent Contract asks validators to read registered ESPN/TheSportsDB evidence, agree on bounded truth and coverage bitmaps, and send the finalized result to the game contract. Deterministic on-chain code scores grids, refunds unsupported calls, opens payouts, or returns full stakes when liquidity or evidence deadlines fail. The Next.js frontend handles wallet recovery, stake allocation, finalized entries, settlement, claims, rounds, standings, integrity, and safer-play disclosures. V2 is live on Bradbury with 10 GEN entries and a disclosed two-wallet lifecycle rehearsal; the repo also includes settled Studionet TRUE/FALSE consensus proof, 46 direct contract tests, deployment receipts, and runbooks.
 ```
 
-Character count: **982** including spaces and punctuation.
+Character count: **985** including spaces and punctuation.
 
 ## Evidence URLs
 
@@ -58,7 +58,7 @@ Do not add localhost links, private Vercel deployment URLs, fixture-only screens
 - Full-match resolver: `0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB`
 - Public round: `epl-2026-08-21-arsenal-coventry-v2`
 - Public round at preparation time: 2 entries, 2 unique grids, 20 GEN escrow, 1 GEN jackpot, liquidity gate met.
-- Controlled QA round: `qa-2026-08-13-motagua-cartagines-v1`; two controlled wallets, 20 GEN escrow, settlement rehearsal armed for the registered post-match evidence window.
+- Controlled QA round: `qa-2026-08-13-motagua-cartagines-v1`; two controlled wallets and 20 GEN escrow. Post-match attempts returned `SOURCE_UNAVAILABLE` because only one registered publisher was reachable, so the resolver stayed `PENDING`, no grid was scored, and the keeper remained armed for the full-refund deadline.
 
 ### Studionet reusable contract
 
@@ -77,11 +77,11 @@ Do not add localhost links, private Vercel deployment URLs, fixture-only screens
 - [x] Live reviewer route exposes settled TRUE and FALSE records.
 - [x] All three contracts pass GenVM lint/validation.
 - [x] Direct Mode suite passes 46/46 tests.
-- [ ] Isolated Bradbury rehearsal resolves, scores, and records two successful claims with before/after balances.
+- [ ] Isolated Bradbury rehearsal exits safely: either settlement completes, or the confirmed `SOURCE_UNAVAILABLE` condition reaches timeout refunds; record both successful claims and before/after balances.
 - [ ] Optional 90-second public recording is uploaded and its URL is added as evidence.
 - [ ] Final production build is deployed and visually rechecked after the documentation/UI polish commit.
 
-The first unchecked item is the strongest remaining credibility gate. The video is optional but likely improves review speed and highlight potential. Do not spend a Portal Project slot until the production deployment and payout rehearsal evidence are current.
+The first unchecked item is the strongest remaining credibility gate. The video is optional but likely improves review speed and highlight potential. Do not spend a Portal Project slot until the production deployment and controlled lifecycle evidence are current.
 
 ## Optional public post copy
 

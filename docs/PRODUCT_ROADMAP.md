@@ -27,8 +27,11 @@ rolling jackpot.
 - [x] Register the 21 August 2026 Arsenal–Coventry fixture with match-specific
   ESPN and TheSportsDB URLs.
 - [ ] Complete the armed two-wallet Bradbury rehearsal: both distinct-grid
-  entries are escrowed; after full time, resolve, redispatch if needed, process,
-  claim from both wallets, and record before/after balances and receipts.
+  entries are escrowed; post-match attempts correctly returned
+  `SOURCE_UNAVAILABLE` with no scoring because only one publisher was reachable.
+  At the deadline, activate full refunds, claim from both wallets, and record
+  before/after balances and receipts (or record settlement claims if two-source
+  evidence becomes available first).
 - [x] Record accepted deployment receipts in `deployments/genlayer/`.
 - Record finality once Bradbury advances the accepted receipts beyond status 5.
 - [x] Update Vercel environment variables and visually verify the public game,

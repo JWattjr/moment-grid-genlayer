@@ -89,6 +89,24 @@
         "liquidity_ready": true,
         "total_escrow_wei": "20000000000000000000",
         "jackpot_pool_wei": "1000000000000000000",
+        "resolution_observation": {
+          "verified_at": "2026-08-13T09:24:51Z",
+          "status": "PENDING",
+          "attempt_count": 3,
+          "reason_code": "SOURCE_UNAVAILABLE",
+          "evidence_summary": "Fewer than two configured authoritative sources were available.",
+          "available_source_references": [
+            "https://www.thesportsdb.com/event/2479172-motagua-vs-cartagines"
+          ],
+          "successful_execution_transactions": [
+            "0x822fa1eba5d5003d3d4c5e13b7d9f367cfd257f94f2821a68a98750e8be0fa95",
+            "0x33621966b7302de97ebbc4fec47db845dd3a9f379cc4e42caf3dfcb97bb3e26b"
+          ],
+          "not_voted_transaction": "0x759cbb583d714dfae4456355c36e920603679f101fa9da748204c186575c7643",
+          "game_status": "OPEN",
+          "settlement_cursor": 0,
+          "expected_safe_exit": "Activate full refunds after 2026-08-14T06:00:00Z if two-source evidence remains unavailable, then claim both gross stakes."
+        },
         "owner_grid_moment_ids": [1, 4, 7, 10, 13, 16, 19, 22, 25],
         "test_bot_grid_moment_ids": [3, 6, 9, 12, 15, 18, 21, 24, 27],
         "test_bot_funding_transaction": "0x24216bdf259e1f4ecbb5d1170eb12a243e079c5947cbff3cdfddc375a94a0a7b",
