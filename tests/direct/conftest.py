@@ -1,21 +1,43 @@
-"""Test-suite compatibility helpers.
+"""Cross-platform compatibility helpers for genlayer-test v0.29.
 
-genlayer-test v0.29 unlinks its temporary stdin file while fd 0 still points
-to it. POSIX permits that, Windows does not. Delay only that unlink until the
-VM restores stdin; no contract or test behavior is changed.
+The Direct VM refreshes ``gl.message`` after ``warp``/``value`` changes but
+does not refresh the same dynamic fields in ``gl.message_raw``. Contracts use
+the raw network timestamp, so keep both views synchronized on every platform.
+
+The test package also unlinks its temporary stdin file while fd 0 still points
+to it. POSIX permits that, Windows does not, so Windows delays only that unlink
+until stdin has been restored. No contract behavior is changed.
 """
 
 import os
+
+from gltest.direct.vm import VMContext
+
+
+_original_refresh = VMContext._refresh_gl_message
+
+
+def _refresh_dynamic_message_fields(self):
+    _original_refresh(self)
+    try:
+        import genlayer.gl as gl
+
+        if gl.message_raw is not None:
+            gl.message_raw["datetime"] = self._datetime
+            gl.message_raw["value"] = self._value
+    except ImportError:
+        pass
+
+
+VMContext._refresh_gl_message = _refresh_dynamic_message_fields
 
 
 if os.name == "nt":
     import tempfile
 
     from gltest.direct import loader
-    from gltest.direct.vm import VMContext
 
     _original_cleanup = VMContext._cleanup_after_deactivate
-    _original_refresh = VMContext._refresh_gl_message
 
     def _windows_safe_inject_message_to_fd0(vm):
         from genlayer.py import calldata
@@ -63,17 +85,5 @@ if os.name == "nt":
                 pass
             self._windows_stdin_path = None
 
-    def _windows_refresh_message(self):
-        _original_refresh(self)
-        try:
-            import genlayer.gl as gl
-
-            if gl.message_raw is not None:
-                gl.message_raw["datetime"] = self._datetime
-                gl.message_raw["value"] = self._value
-        except ImportError:
-            pass
-
     loader._inject_message_to_fd0 = _windows_safe_inject_message_to_fd0
     VMContext._cleanup_after_deactivate = _windows_safe_cleanup
-    VMContext._refresh_gl_message = _windows_refresh_message
