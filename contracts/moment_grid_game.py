@@ -13,7 +13,7 @@ SETTLED = "SETTLED"
 REFUNDING = "REFUNDING"
 CELLS = 9
 OPTIONS_PER_CELL = 3
-MINIMUM_STAKE = 10_000_000_000_000_000_000
+MINIMUM_ALLOWED_STAKE = 1_000_000_000_000_000_000
 MAXIMUM_STAKE = 100_000_000_000_000_000_000
 MAX_SETTLEMENT_BATCH = 100
 HORIZONTAL_MASKS = [0x007, 0x038, 0x1C0]
@@ -68,6 +68,7 @@ class GameRound:
     window_2_valid_bitmap: u256
     resolution_accepted_at: str
     settled_at: str
+    minimum_stake: u256
 
 
 @allow_storage
@@ -190,6 +191,7 @@ class MomentGridGame(gl.Contract):
         kickoff_at: str,
         resolve_not_before: str,
         refund_at: str,
+        minimum_stake: u256,
         minimum_participants: u256,
         minimum_total_stake: u256,
         minimum_unique_grids: u256,
@@ -214,7 +216,9 @@ class MomentGridGame(gl.Contract):
             and resolve_not_before < refund_at
         ):
             raise gl.vm.UserError("Round timing is invalid")
-        if minimum_participants < 2 or minimum_total_stake < MINIMUM_STAKE * 2:
+        if minimum_stake < MINIMUM_ALLOWED_STAKE or minimum_stake > MAXIMUM_STAKE:
+            raise gl.vm.UserError("Round stake floor is invalid")
+        if minimum_participants < 2 or minimum_total_stake < minimum_stake * minimum_participants:
             raise gl.vm.UserError("Round liquidity floor is too low")
         if minimum_unique_grids < 2 or minimum_unique_grids > minimum_participants:
             raise gl.vm.UserError("Round grid diversity floor is invalid")
@@ -257,6 +261,7 @@ class MomentGridGame(gl.Contract):
             window_2_valid_bitmap=0,
             resolution_accepted_at="",
             settled_at="",
+            minimum_stake=minimum_stake,
         )
         self.round_indexes[round_id] = u256(len(self.round_ids))
         self.round_ids.append(round_id)
@@ -281,8 +286,8 @@ class MomentGridGame(gl.Contract):
         if game_round.status != OPEN or _now_seconds() >= game_round.lock_at:
             raise gl.vm.UserError("Round is locked")
         stake_amount = u256(gl.message.value)
-        if stake_amount < MINIMUM_STAKE:
-            raise gl.vm.UserError("Minimum stake is 10 GEN")
+        if stake_amount < game_round.minimum_stake:
+            raise gl.vm.UserError("Stake is below this round's minimum")
         if stake_amount > MAXIMUM_STAKE:
             raise gl.vm.UserError("Maximum testnet stake is 100 GEN")
         _validate_grid(packed_grid)
@@ -493,7 +498,7 @@ class MomentGridGame(gl.Contract):
 
     @gl.public.view
     def get_stake_quote(self, stake_amount: u256) -> dict:
-        if stake_amount < MINIMUM_STAKE:
+        if stake_amount < MINIMUM_ALLOWED_STAKE:
             return {}
         common_per_cell = _cell_stake(stake_amount, 0)
         medium_per_cell = _cell_stake(stake_amount, 3)
@@ -521,7 +526,7 @@ class MomentGridGame(gl.Contract):
             "resolver_address": str(game_round.resolver_address),
             "resolver_resolution_id": game_round.resolver_resolution_id,
             "status": game_round.status,
-            "minimum_stake": u256(MINIMUM_STAKE),
+            "minimum_stake": game_round.minimum_stake,
             "maximum_stake": u256(MAXIMUM_STAKE),
             "lock_at": game_round.lock_at,
             "kickoff_at": game_round.kickoff_at,
@@ -627,7 +632,7 @@ class MomentGridGame(gl.Contract):
             "jackpot_rollover": self.jackpot_rollover,
             "revenue_withdrawable": self.revenue_withdrawable,
             "revenue_withdrawn": self.revenue_withdrawn,
-            "minimum_stake": u256(MINIMUM_STAKE),
+            "minimum_allowed_stake": u256(MINIMUM_ALLOWED_STAKE),
             "maximum_stake": u256(MAXIMUM_STAKE),
             "paused": self.paused,
             "owner": str(self.owner),
@@ -635,7 +640,7 @@ class MomentGridGame(gl.Contract):
 
     @gl.public.view
     def get_version(self) -> str:
-        return "2.0.0"
+        return "3.0.0"
 
     @gl.public.view
     def get_round_count(self) -> u256:

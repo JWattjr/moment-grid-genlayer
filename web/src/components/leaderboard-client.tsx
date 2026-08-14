@@ -2,10 +2,11 @@
 
 import { Crown, Trophy } from "lucide-react";
 import { useEffect, useState } from "react";
-import { genLayerGameConfig, isDisclosedTestBot, readGameRound, readRoundEntries, type GameEntryRecord } from "@/lib/genlayer-game";
+import { disclosedBotLabel, genLayerGameConfig, isDisclosedTestBot, readGameRound, readRoundEntries, type GameEntryRecord } from "@/lib/genlayer-game";
 
 function short(address?: string) {
-  if (isDisclosedTestBot(address)) return "Test Bot";
+  const botLabel = disclosedBotLabel(address);
+  if (botLabel) return botLabel;
   return address ? `${address.slice(0, 6)}…${address.slice(-4)}` : "Unknown";
 }
 
@@ -28,19 +29,26 @@ export function LeaderboardClient() {
         setEntries(records);
         setStatus(records.length ? "" : "No entries in this round.");
       } catch {
-        setStatus("The current legacy round does not expose indexable entries. Deploy V2 to activate verified standings.");
+        setStatus("The current legacy round does not expose indexable entries. Use a current indexed deployment to activate verified standings.");
       }
-    }).catch(() => setStatus("Unable to read leaderboard state from Bradbury."));
+    }).catch(() => setStatus("Unable to read leaderboard state from the active network."));
   }, []);
 
   if (!genLayerGameConfig.activeRoundEnabled || status) return <div className="prototype-note"><Trophy size={15} />{status || "Leaderboard is not configured."}</div>;
+  const humanEntries = entries.filter((entry) => !isDisclosedTestBot(entry.player));
+  const botEntries = entries.filter((entry) => isDisclosedTestBot(entry.player));
   return <>
     <section className="podium" aria-label="Top three players">
-      {entries.slice(0, 3).map((entry, index) => <div className={`podium-place place-${index + 1}`} key={entry.player}><Crown size={15} /><span>0{index + 1}</span><strong>{short(entry.player)}</strong><b>{String(entry.completed_lines)} lines</b></div>)}
+      {humanEntries.slice(0, 3).map((entry, index) => <div className={`podium-place place-${index + 1}`} key={entry.player}><Crown size={15} /><span>0{index + 1}</span><strong>{short(entry.player)}</strong><b>{String(entry.completed_lines)} lines</b></div>)}
     </section>
     <section className="rank-card">
       <header><span>Rank</span><span>Player</span><span>Lines</span><span>Hits</span></header>
-      {entries.map((entry, index) => <div key={entry.player}><b>#{String(index + 1).padStart(2, "0")}</b><strong>{short(entry.player)}</strong><span>{String(entry.completed_lines)}</span><span>{hits(entry.marked_mask)}/9</span></div>)}
+      {humanEntries.map((entry, index) => <div key={entry.player}><b>#{String(index + 1).padStart(2, "0")}</b><strong>{short(entry.player)}</strong><span>{String(entry.completed_lines)}</span><span>{hits(entry.marked_mask)}/9</span></div>)}
+      {humanEntries.length === 0 && <div><b>—</b><strong>No human results yet</strong><span>—</span><span>—</span></div>}
+    </section>
+    <section className="rank-card" aria-label="Disclosed automated opponents">
+      <header><span>Bot</span><span>Strategy</span><span>Lines</span><span>Hits</span></header>
+      {botEntries.map((entry) => <div key={entry.player}><b>BOT</b><strong>{short(entry.player)}</strong><span>{String(entry.completed_lines)}</span><span>{hits(entry.marked_mask)}/9</span></div>)}
     </section>
   </>;
 }

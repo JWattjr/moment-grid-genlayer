@@ -513,7 +513,6 @@ class MatchRoundResolver(gl.Contract):
             resolution.window_1_valid_bitmap = u256(adjudication["window_1_valid_bitmap"])
             resolution.window_2_valid_bitmap = u256(adjudication["window_2_valid_bitmap"])
             resolution.resolved_at = str(gl.message_raw["datetime"])
-            self._dispatch_resolution(resolution)
 
     @gl.public.write
     def dispatch_resolution(self, resolution_id: str) -> None:
@@ -573,7 +572,7 @@ class MatchRoundResolver(gl.Contract):
 
     @gl.public.view
     def get_version(self) -> str:
-        return "2.0.0"
+        return "3.0.0"
 
     @gl.public.view
     def get_resolution_count(self) -> u256:

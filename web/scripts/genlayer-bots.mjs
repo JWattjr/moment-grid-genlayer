@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { createAccount, createClient } from "genlayer-js";
-import { testnetBradbury } from "genlayer-js/chains";
+import { studionet, testnetBradbury } from "genlayer-js/chains";
 import { ExecutionResult, TransactionStatus } from "genlayer-js/types";
 import { pathToFileURL } from "node:url";
 import { decideKeeperAction, KeeperAction } from "./keeper-policy.mjs";
@@ -9,14 +9,25 @@ import { decideKeeperAction, KeeperAction } from "./keeper-policy.mjs";
 const DEFAULT_GAME = "0x1D87C32c1A0D65C083ce322608D284E5767b8408";
 const DEFAULT_RESOLVER = "0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB";
 const DEFAULT_ROUND = "epl-2026-08-21-arsenal-coventry-v2";
-const TESTNET_CHAIN_ID = 4221;
 const ONE_GEN = 1_000_000_000_000_000_000n;
 
-// A fixed, public grid using the third option in every cell. A disclosed test
-// bot must be predictable and auditable, not optimized against human entries.
-export const TEST_BOT_MOMENT_IDS = Object.freeze([3, 6, 9, 12, 15, 18, 21, 24, 27]);
+// Both grids are fixed, public, and committed before human play. These bots
+// provide disclosed liquidity; they never optimize against a player's entry.
+export const PLAYER_BOT_PROFILES = Object.freeze({
+  form: Object.freeze({
+    label: "Form Bot",
+    strategy: "First registered option in every cell.",
+    momentIds: Object.freeze([1, 4, 7, 10, 13, 16, 19, 22, 25]),
+  }),
+  chaos: Object.freeze({
+    label: "Chaos Bot",
+    strategy: "Third registered option in every cell.",
+    momentIds: Object.freeze([3, 6, 9, 12, 15, 18, 21, 24, 27]),
+  }),
+});
+export const TEST_BOT_MOMENT_IDS = PLAYER_BOT_PROFILES.chaos.momentIds;
 
-function packMomentIds(momentIds) {
+export function packMomentIds(momentIds) {
   if (momentIds.length !== 9) throw new Error("The test bot grid must contain nine moment IDs.");
   return momentIds.reduce((packed, momentId, cell) => {
     const first = cell * 3 + 1;
@@ -32,22 +43,30 @@ function json(value) {
 }
 
 function config() {
-  const gameAddress = process.env.GENLAYER_GAME_ADDRESS ?? process.env.NEXT_PUBLIC_GENLAYER_GAME_ADDRESS ?? DEFAULT_GAME;
-  const resolverAddress = process.env.GENLAYER_ROUND_RESOLVER_ADDRESS ?? process.env.NEXT_PUBLIC_GENLAYER_ROUND_RESOLVER_ADDRESS ?? DEFAULT_RESOLVER;
-  const roundId = process.env.GENLAYER_GAME_ROUND_ID ?? process.env.NEXT_PUBLIC_GENLAYER_GAME_ROUND_ID ?? DEFAULT_ROUND;
-  return { gameAddress, resolverAddress, roundId };
+  const network = process.env.GENLAYER_NETWORK ?? process.env.NEXT_PUBLIC_GENLAYER_GAME_NETWORK ?? "studionet";
+  const legacyDefaults = network === "testnet-bradbury";
+  const gameAddress = process.env.GENLAYER_GAME_ADDRESS ?? process.env.NEXT_PUBLIC_GENLAYER_GAME_ADDRESS ?? (legacyDefaults ? DEFAULT_GAME : "");
+  const resolverAddress = process.env.GENLAYER_ROUND_RESOLVER_ADDRESS ?? process.env.NEXT_PUBLIC_GENLAYER_ROUND_RESOLVER_ADDRESS ?? (legacyDefaults ? DEFAULT_RESOLVER : "");
+  const roundId = process.env.GENLAYER_GAME_ROUND_ID ?? process.env.NEXT_PUBLIC_GENLAYER_GAME_ROUND_ID ?? (legacyDefaults ? DEFAULT_ROUND : "");
+  if (!/^0x[0-9a-fA-F]{40}$/.test(gameAddress) || !/^0x[0-9a-fA-F]{40}$/.test(resolverAddress) || !roundId) {
+    throw new Error("GENLAYER_GAME_ADDRESS, GENLAYER_ROUND_RESOLVER_ADDRESS, and GENLAYER_GAME_ROUND_ID are required.");
+  }
+  if (network !== "studionet" && network !== "testnet-bradbury") {
+    throw new Error("Bots are restricted to studionet or testnet-bradbury.");
+  }
+  return { gameAddress, resolverAddress, roundId, network };
 }
 
-function clients(requireSigner) {
-  if (testnetBradbury.id !== TESTNET_CHAIN_ID) throw new Error("Testnet chain definition changed; refusing to run bots.");
-  const reader = createClient({ chain: testnetBradbury });
+function clients(requireSigner, network) {
+  const chain = network === "studionet" ? studionet : testnetBradbury;
+  const reader = createClient({ chain });
   if (!requireSigner) return { reader, writer: null, account: null };
   const privateKey = process.env.GENLAYER_BOT_PRIVATE_KEY?.trim();
   if (!privateKey?.match(/^0x[0-9a-fA-F]{64}$/)) {
     throw new Error("GENLAYER_BOT_PRIVATE_KEY must be supplied through a secret store for execution.");
   }
   const account = createAccount(privateKey);
-  const writer = createClient({ chain: testnetBradbury, account });
+  const writer = createClient({ chain, account });
   return { reader, writer, account };
 }
 
@@ -60,8 +79,9 @@ async function submit(reader, writer, address, functionName, args, value = 0n) {
     interval: 3_000,
     retries: 120,
   });
-  if (receipt.txExecutionResultName !== ExecutionResult.FINISHED_WITH_RETURN) {
-    throw new Error(`${functionName} was accepted but execution failed (${receipt.txExecutionResultName}).`);
+  const leaderExecution = receipt.consensus_data?.leader_receipt?.[0]?.execution_result;
+  if (receipt.txExecutionResultName !== ExecutionResult.FINISHED_WITH_RETURN && leaderExecution !== "SUCCESS") {
+    throw new Error(`${functionName} was accepted but execution failed (${receipt.txExecutionResultName ?? leaderExecution ?? "UNKNOWN"}).`);
   }
   console.log(`${functionName} accepted with successful execution.`);
   return hash;
@@ -76,25 +96,39 @@ async function readState(reader, settings, player) {
   return { round, resolution, entry };
 }
 
-async function runPlayer(execute) {
+export function playerBotProfile(name = "form") {
+  const profile = PLAYER_BOT_PROFILES[name];
+  if (!profile) throw new Error("GENLAYER_BOT_PROFILE must be form or chaos.");
+  return profile;
+}
+
+async function runPlayer(execute, profileName) {
   const settings = config();
-  const { reader, writer, account } = clients(execute);
+  const { reader, writer, account } = clients(execute, settings.network);
+  const profile = playerBotProfile(profileName);
   const disclosedAddress = account?.address ?? process.env.GENLAYER_BOT_ADDRESS ?? "not configured";
   const state = await readState(reader, settings, account?.address);
-  const stakeGen = process.env.GENLAYER_BOT_STAKE_GEN ?? "10";
+  const stakeGen = process.env.GENLAYER_BOT_STAKE_GEN ?? "1";
   if (!/^\d+(\.\d{1,18})?$/.test(stakeGen)) throw new Error("GENLAYER_BOT_STAKE_GEN must be a positive decimal.");
   const [whole, fraction = ""] = stakeGen.split(".");
   const stake = BigInt(whole) * ONE_GEN + BigInt((fraction + "0".repeat(18)).slice(0, 18));
-  if (stake < 10n * ONE_GEN || stake > 100n * ONE_GEN) throw new Error("Test bot stake must be 10–100 GEN.");
+  const roundMinimum = BigInt(state.round?.minimum_stake ?? ONE_GEN);
+  const roundMaximum = BigInt(state.round?.maximum_stake ?? 100n * ONE_GEN);
+  if (stake < roundMinimum || stake > roundMaximum) {
+    throw new Error(`Player bot stake must be within this round's ${roundMinimum}–${roundMaximum} wei range.`);
+  }
 
   const plan = {
-    mode: "TESTNET_PLAYER",
-    network: "testnet-bradbury",
+    mode: "DISCLOSED_PLAYER_BOT",
+    network: settings.network,
+    profile: profileName,
+    label: profile.label,
+    strategy: profile.strategy,
     address: disclosedAddress,
     roundId: settings.roundId,
     stakeWei: stake,
-    momentIds: TEST_BOT_MOMENT_IDS,
-    packedGrid: packMomentIds(TEST_BOT_MOMENT_IDS),
+    momentIds: profile.momentIds,
+    packedGrid: packMomentIds(profile.momentIds),
     existingEntry: Boolean(state.entry && Object.keys(state.entry).length),
     execute,
   };
@@ -112,12 +146,12 @@ async function runPlayer(execute) {
 
 async function runKeeper(execute) {
   const settings = config();
-  const { reader, writer, account } = clients(execute);
+  const { reader, writer, account } = clients(execute, settings.network);
   const state = await readState(reader, settings);
   const decision = decideKeeperAction(state.round, state.resolution);
   console.log(json({
     mode: "KEEPER",
-    network: "testnet-bradbury",
+    network: settings.network,
     keeperAddress: account?.address ?? process.env.GENLAYER_BOT_ADDRESS ?? "not configured",
     roundId: settings.roundId,
     roundStatus: state.round?.status,
@@ -142,12 +176,15 @@ async function runKeeper(execute) {
 export async function main(args = process.argv.slice(2)) {
   const mode = args.find((value) => !value.startsWith("--")) ?? "keeper";
   const execute = args.includes("--execute");
-  if (execute && process.env.ALLOW_GENLAYER_TESTNET_BOTS !== "true") {
-    throw new Error("Set ALLOW_GENLAYER_TESTNET_BOTS=true to acknowledge testnet-only execution.");
+  const profileName = args.find((value) => value.startsWith("--profile="))?.split("=")[1]
+    ?? process.env.GENLAYER_BOT_PROFILE
+    ?? "form";
+  if (execute && process.env.ALLOW_GENLAYER_BOTS !== "true" && process.env.ALLOW_GENLAYER_TESTNET_BOTS !== "true") {
+    throw new Error("Set ALLOW_GENLAYER_BOTS=true to acknowledge disclosed test-network execution.");
   }
-  if (mode === "player") return runPlayer(execute);
+  if (mode === "player") return runPlayer(execute, profileName);
   if (mode === "keeper") return runKeeper(execute);
-  throw new Error("Usage: genlayer-bots.mjs <player|keeper> [--execute]");
+  throw new Error("Usage: genlayer-bots.mjs <player|keeper> [--profile=form|chaos] [--execute]");
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1]).href) {

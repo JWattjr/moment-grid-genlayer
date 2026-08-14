@@ -5,7 +5,7 @@ responsibilities.
 
 ## Trust boundary
 
-1. A player signs one payable `join_round` transaction with at least 10 GEN.
+1. A player signs one payable `join_round` transaction with the round's immutable minimum stake (1 test GEN in the active V3 round).
    The contract allocates the stake across the rarity-weighted cell pools,
    round jackpot, and pending protocol revenue while storing the packed grid
    on-chain.
@@ -13,11 +13,11 @@ responsibilities.
    independently extract the final match facts and compare the three stable
    outcome bitmaps plus evidence-coverage bitmaps. A missing statistic is never
    silently treated as FALSE.
-3. After the resolver transaction is finalized, `MatchRoundResolver` emits an
-   authenticated settlement message to `MomentGridGame` only after the
-   registered post-match evidence window. No owner or frontend
-   can submit a winning bitmap, and an accepted-but-appealable result cannot
-   release claims.
+3. The resolver transaction stores consensus first. A separate permissionless
+   `dispatch_resolution` transaction then emits the authenticated settlement
+   message to `MomentGridGame`. This ordering prevents a child callback from
+   outrunning or surviving a failed parent transaction. No owner or frontend
+   can submit a winning bitmap.
 4. Permissionless callers process settlement in bounded batches. Deterministic
    contract code scores each packed grid, totals jackpot-qualifying stake, and
    then exposes pull-based regular-pool and jackpot claims.
@@ -30,19 +30,21 @@ or claimable balances.
 
 ## Stake allocation
 
-- The minimum stake is 10 GEN; players may stake more.
-- Each Common cell receives 5% of the gross stake (1.5 GEN total at 10 GEN).
-- Each Medium cell receives 10% (3 GEN total at 10 GEN).
-- Each Rare cell receives 15% (4.5 GEN total at 10 GEN).
-- The jackpot receives 5% (0.5 GEN at 10 GEN).
-- Protocol revenue receives 5% (0.5 GEN at 10 GEN). Rounding dust is assigned
+- V3 supports immutable per-round floors from 1 to 100 GEN. The active round minimum is 1 test GEN.
+- Each Common cell receives 5% of the gross stake (0.05 GEN per cell at 1 GEN).
+- Each Medium cell receives 10% (0.10 GEN per cell at 1 GEN).
+- Each Rare cell receives 15% (0.15 GEN per cell at 1 GEN).
+- The jackpot receives 5% (0.05 GEN at 1 GEN).
+- Protocol revenue receives 5% (0.05 GEN at 1 GEN). Rounding dust is assigned
   to revenue so all received wei are accounted for.
 
 ## Payout rules
 
-- Every cell has three selectable moment buckets.
-- If one or more backed moments in a cell are true, all winning stakes share the
-  entire cell pool pro rata.
+- Every cell has three selectable moment buckets and its own total, option-stake,
+  winner, refund, claimed-stake, and paid-pool ledger. There are exactly nine
+  economic pools; balances never cross between cells.
+- If one or more backed moments in a cell are true, the correct predictors in
+  that cell share only that cell's entire loser-funded pool pro rata.
 - If no backed moment is true, every player receives that cell's stake back.
 - If the sources cannot prove a selected moment true or false, that selection's
   cell stake is refunded and removed from the distributable pool.
@@ -62,16 +64,16 @@ or claimable balances.
 
 ## Network progression
 
-Local direct tests cover validation, packing, scoring, pool accounting, and
-refund rules. Studionet is suitable for rehearsing signed transactions, but the
-public money-like test flow belongs on persistent Testnet Bradbury with faucet
-GEN.
+Local direct tests cover validation, packing, scoring, all nine independent pool
+ledgers, and refund rules. The public playable V3 flow runs on StudioNet with
+test GEN. Bradbury V2 remains preserved for historical position recovery only.
 
-## V2 lifecycle safety
+## V3 lifecycle safety
 
 `lock_at < kickoff_at <= resolve_not_before < refund_at` is enforced on-chain.
 The owner can cancel only before lock. After lock, recovery is permissionless.
 Contract pause stops new rounds and entries but never blocks scoring, refunds,
 claims, or withdrawals. Ownership transfer uses a two-step proposal and
-acceptance. All wallet writes wait for `FINALIZED` and verify successful
-execution before the UI reports completion.
+acceptance. All wallet writes wait for `FINALIZED`, accept both normalized SDK
+and raw StudioNet receipt shapes, and verify successful execution before the UI
+reports completion.

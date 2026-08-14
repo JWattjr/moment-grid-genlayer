@@ -1,12 +1,12 @@
 # GenLayer football evidence policy
 
-`MatchMomentResolver` requires two or three immutable HTTPS evidence URLs for each registered moment. V1 permits only code-reviewed public origins: BBC Sport, ESPN, and TheSportsDB.
+`MatchMomentResolver` and `MatchRoundResolver` require two or three immutable HTTPS evidence URLs for each registered definition. V3 permits only code-reviewed public origins: BBC Sport, ESPN, and TheSportsDB.
 
 ## Why these sources
 
 - **BBC Sport** provides stable, keyless match reports and timelines with recognizable match identity and event descriptions.
 - **ESPN** provides an independent, keyless match report/timeline suitable for cross-checking teams, score, goals, penalties, and final status.
-- **TheSportsDB** is allowlisted as a structured public alternative, but the committed reviewer fixtures currently use BBC and ESPN so every showcased decision has two human-readable reports.
+- **TheSportsDB** is allowlisted as a structured public alternative. The active Arsenal–Coventry V3 round pairs it with BBC's date-specific fixture page; settled reusable proofs use BBC and ESPN.
 
 No private API key is required. Source URLs are stored with the definition and cannot be replaced. A resolution caller cannot supply evidence, change teams, alter the criterion, or provide an answer.
 
@@ -20,6 +20,7 @@ Fixtures under `fixtures/genlayer/` contain only immutable identity, criteria, a
 | Argentina–France | 2022-12-18 | Home scores first; both teams score; penalty 0–30 | BBC, ESPN |
 | Manchester United–Liverpool | 2024-09-01 | Home scores first; both teams score; penalty 30–60 | BBC, ESPN |
 | Arsenal–Bournemouth | 2024-05-04 | Home scores first; both teams score; penalty 30–60 | BBC, ESPN |
+| Arsenal–Coventry City | 2026-08-21 | Full 27-moment V3 round with explicit coverage bitmaps | BBC, TheSportsDB |
 
 These examples are not answer caches. GenLayer still fetches and adjudicates their reports.
 
@@ -57,7 +58,7 @@ Disallowed or overturned goals do not count. Intervals are half-open: 30–60 in
 
 ## Adding a source
 
-Source governance is intentionally modular but curated in V1. Adding a publisher requires:
+Source governance is intentionally modular but curated in V3. Adding a publisher requires:
 
 1. review its public accessibility, page stability, terms, identity fields, event coverage, and key requirements;
 2. add the exact hostname to the contract allowlist;
@@ -70,4 +71,4 @@ An owner cannot bypass this review merely by registering a new hostname.
 
 ## Trust assumptions
 
-V1 is not decentralized source governance. The owner curates questions and approved URLs, publishers control their pages, and GenLayer validators interpret the available evidence. Security comes from immutable definitions, independent publisher evidence, multiple validators, explicit conflict/finality rules, and auditable on-chain results—not from claiming the sources themselves are trustless. Production use should add durable governance, monitoring, publisher-diversity requirements, and an appeals/versioning policy.
+V3 is not decentralized source governance. The owner curates questions and approved URLs, publishers control their pages, and GenLayer validators interpret the available evidence. Security comes from immutable definitions, independent publisher evidence, multiple validators, explicit conflict/finality rules, and auditable on-chain results—not from claiming the sources themselves are trustless. Production use should add durable governance, monitoring, publisher-diversity requirements, and an appeals/versioning policy.

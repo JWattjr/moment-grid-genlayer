@@ -35,7 +35,7 @@ import {
 } from "@moment-grid/scoring";
 import { useGenLayerResolution, type GenLayerResolutionPhase } from "@/lib/use-genlayer-resolution";
 import { genLayerResolverConfig, type ResolverRecord } from "@/lib/genlayer-resolver";
-import { formatGen, MINIMUM_STAKE_GEN, stakeAllocation } from "@/lib/genlayer-game";
+import { formatGen, MINIMUM_STAKE_GEN, MINIMUM_STAKE_WEI, stakeAllocation } from "@/lib/genlayer-game";
 import { useOnchainGame } from "@/lib/use-onchain-game";
 import { useMatchSource } from "@/lib/use-match-source";
 import { MomentHeader, MomentNav } from "./moment-chrome";
@@ -55,6 +55,7 @@ const QA_FIXTURE: FixtureLabel = { home: "Motagua", away: "Cartagines", homeCode
 const DEMO_FIXTURE: FixtureLabel = { home: "Arsenal", away: "Chelsea", homeCode: "ARS", awayCode: "CHE" };
 const REGISTERED_FIXTURE: FixtureLabel = { home: "Registered home", away: "Registered away", homeCode: "HOME", awayCode: "AWAY" };
 const FIXTURES_BY_ID: Record<string, FixtureLabel> = {
+  "epl-2026-08-21-arsenal-coventry-studionet-v3": LIVE_FIXTURE,
   "epl-2026-08-21-arsenal-coventry-v2": LIVE_FIXTURE,
   "epl-arsenal-coventry-2026-08-21": LIVE_FIXTURE,
   "qa-2026-08-13-motagua-cartagines-v1": QA_FIXTURE,
@@ -104,6 +105,7 @@ export function GameShell({ roundId }: { roundId?: string }) {
   const genLayer = useGenLayerResolution();
   const onchainGame = useOnchainGame(roundId);
   const fixture = fixtureForGame(onchainGame);
+  const roundMinimumStake = onchainGame.round?.minimum_stake;
   const [stakeInput, setStakeInput] = useState(MINIMUM_STAKE_GEN);
   const [revealed, setRevealed] = useState(false);
   const [feedbackEnabled, setFeedbackEnabled] = useState(true);
@@ -138,6 +140,14 @@ export function GameShell({ roundId }: { roundId?: string }) {
     });
     return () => window.cancelAnimationFrame(frame);
   }, [onchainGame.entry]);
+
+  useEffect(() => {
+    if (!roundMinimumStake || onchainGame.entry) return;
+    const frame = window.requestAnimationFrame(() => {
+      setStakeInput((current) => current === MINIMUM_STAKE_GEN ? formatGen(roundMinimumStake) : current);
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [onchainGame.entry, roundMinimumStake]);
 
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
@@ -342,8 +352,8 @@ function MatchCard({ game }: { game?: OnchainGame }) {
   const fixture = game ? fixtureForGame(game) : DEMO_FIXTURE;
   return (
     <div className="match-card">
-      <div><span className="eyebrow">{configured ? "On-chain round · Bradbury V2" : "Interactive evidence demo"}</span><strong>{fixture.homeCode} · {fixture.home} vs {fixture.away} · {fixture.awayCode}</strong></div>
-      <div className="match-meta"><span>{configured ? "Bradbury testnet" : "Local replay"}</span><div className="match-window"><Clock3 size={13} /> {round?.kickoff_at ? new Date(round.kickoff_at).toLocaleString() : configured ? "Reading kickoff…" : "2 min / 90′"}</div></div>
+      <div><span className="eyebrow">{configured ? `On-chain round · ${game!.config.deploymentLabel}` : "Interactive evidence demo"}</span><strong>{fixture.homeCode} · {fixture.home} vs {fixture.away} · {fixture.awayCode}</strong></div>
+      <div className="match-meta"><span>{configured ? `${game!.config.networkLabel} · Test GEN` : "Local replay"}</span><div className="match-window"><Clock3 size={13} /> {round?.kickoff_at ? new Date(round.kickoff_at).toLocaleString() : configured ? "Reading kickoff…" : "2 min / 90′"}</div></div>
     </div>
   );
 }
@@ -370,7 +380,7 @@ function BuildScreen({ grid, complete, onPick, onQuickFill, onContinue, onchainG
         <div><span className="step-label">01 · Build</span><h1>Call the match.</h1></div>
         {!committed && <button className="text-button" onClick={onQuickFill}><Zap size={13} /> Random fill</button>}
       </div>
-      <p className="lede">Build nine football predictions. Rows control rarity; columns decide when each call resolves.</p>
+      <p className="lede">Build nine football predictions. Every square is its own loser-funded pari-mutuel pool; rows control stake weight and columns control timing.</p>
       <MatchCard game={onchainGame} />
       <ResolutionLoop compact />
       <GridBoard grid={grid} onPick={committed ? undefined : onPick} pools={onchainGame.pools} />
@@ -444,8 +454,10 @@ function ConsensusMeter({ support, tier }: { support: number; tier: number }) {
 
 function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame, stakeInput, onStakeInput, onBack, onLock }: { grid: PredictionId[]; error: string; genLayerConfigured: boolean; phase: GenLayerResolutionPhase; busy: boolean; onchainGame: OnchainGame; stakeInput: string; onStakeInput: (value: string) => void; onBack: () => void; onLock: () => void }) {
   const [confirmed, setConfirmed] = useState(false);
+  const minimumStake = onchainGame.round?.minimum_stake ?? MINIMUM_STAKE_WEI;
+  const maximumStake = onchainGame.round?.maximum_stake;
   let allocation: ReturnType<typeof stakeAllocation> | null = null;
-  try { allocation = stakeAllocation(stakeInput); } catch { allocation = null; }
+  try { allocation = stakeAllocation(stakeInput, minimumStake, maximumStake); } catch { allocation = null; }
   const v2Ready = !onchainGame.configured || Boolean(onchainGame.round?.kickoff_at && onchainGame.round.resolve_not_before);
   const requestLock = () => {
     if (onchainGame.configured && !onchainGame.entry && !confirmed) {
@@ -462,13 +474,13 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
       <ResolutionJourney stage="locked" />
       {onchainGame.configured ? (
         <div className="stake-card" aria-label="On-chain stake allocation">
-          <header><span>Stake on Bradbury</span><label><input aria-label="Stake in GEN" inputMode="decimal" min="10" max="100" step="1" value={stakeInput} onChange={(event) => { setConfirmed(false); onStakeInput(event.target.value); }} /><b>GEN</b></label></header>
-          <div><span><i className="tier-common" />Common pools</span><b>{allocation ? formatGen(allocation.common) : "—"} GEN / 15%</b></div>
-          <div><span><i className="tier-medium" />Medium pools</span><b>{allocation ? formatGen(allocation.medium) : "—"} GEN / 30%</b></div>
-          <div><span><i className="tier-rare" />Rare pools</span><b>{allocation ? formatGen(allocation.rare) : "—"} GEN / 45%</b></div>
+          <header><span>Stake on {onchainGame.config.networkLabel}</span><label><input aria-label="Stake in GEN" inputMode="decimal" min={formatGen(minimumStake)} max={maximumStake ? formatGen(maximumStake) : "100"} step="0.1" value={stakeInput} onChange={(event) => { setConfirmed(false); onStakeInput(event.target.value); }} /><b>GEN</b></label></header>
+          <div><span><i className="tier-common" />3 Common pools</span><b>{allocation ? `${formatGen(allocation.commonPerCell)} each` : "—"} / 15%</b></div>
+          <div><span><i className="tier-medium" />3 Medium pools</span><b>{allocation ? `${formatGen(allocation.mediumPerCell)} each` : "—"} / 30%</b></div>
+          <div><span><i className="tier-rare" />3 Rare pools</span><b>{allocation ? `${formatGen(allocation.rarePerCell)} each` : "—"} / 45%</b></div>
           <div><span><Trophy size={13} />Jackpot</span><b>{allocation ? formatGen(allocation.jackpot) : "—"} GEN / 5%</b></div>
           <div><span><ShieldCheck size={13} />Protocol</span><b>{allocation ? formatGen(allocation.protocol) : "—"} GEN / 5%</b></div>
-          <p>Maximum loss: {allocation ? formatGen(allocation.stake) : "—"} GEN. Testnet GEN has no promised cash value. Pool backing is public on-chain and payouts depend on other entries.</p>
+          <p>Each square is an independent pool. Winners in that square split its loser-funded balance pro rata. Maximum loss: {allocation ? formatGen(allocation.stake) : "—"} GEN. Test GEN has no promised cash value.</p>
         </div>
       ) : (
         <div className="privacy-proof" aria-label="GenLayer resolution path">
@@ -481,7 +493,7 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
       <GridBoard grid={grid} locked />
       <div className="lock-card"><div className="lock-icon"><LockKeyhole size={20} /></div><div><strong>{onchainGame.configured ? "One signed entry, nine live pools" : "Grid fixed for this replay"}</strong><p>{onchainGame.configured ? "The payable transaction stores your grid and allocates your GEN on-chain." : "Your nine selections are now the immutable scoring input."}</p></div></div>
       {onchainGame.configured && <div className="privacy-note"><ShieldCheck size={16} /><span>Jackpot requires a correct horizontal row plus a correct diagonal · {onchainGame.config.network}.</span></div>}
-      {onchainGame.configured && !v2Ready && !onchainGame.entry && <p className="error-message">This legacy replay round is view-only. New stakes reopen after the V2 contracts are deployed with a future kickoff and evidence window.</p>}
+      {onchainGame.configured && !v2Ready && !onchainGame.entry && <p className="error-message">This legacy round is view-only. New stakes require a future kickoff and evidence window.</p>}
       {confirmed && !onchainGame.entry && <div className="confirmation-card" role="alert"><strong>Confirm your maximum loss</strong><p>You are committing {stakeInput} testnet GEN to nine transparent pari-mutuel pools. Picks cannot be edited after finalization.</p></div>}
       {!onchainGame.configured && genLayerConfigured && genLayerResolverConfig.moment && grid.includes(genLayerResolverConfig.moment.prediction_id as PredictionId) && <div className="privacy-note"><ShieldCheck size={16} /><span>{genLayerResolverConfig.moment.moment_statement} is pre-registered on {genLayerResolverConfig.network} · {phase === "READY" ? "ready" : "verified at lock"}.</span></div>}
       {error && <p className="error-message">{error}</p>}
@@ -528,7 +540,7 @@ function WatchScreen({ snapshot, fixture, error, phase, transactionHash, busy, o
       </div>
       <div className="sealed-panel"><div className="sealed-orbit"><LockKeyhole size={26} /><span /></div><strong>Your predictions are locked</strong><p>Picks and pool backing are transparent on-chain. Validator-agreed evidence settles the grid after full time.</p></div>
       <div className="feed-section"><div className="section-heading"><span>{onchain ? "Illustrative match pulse" : "Match pulse"}</span><small>{snapshot.events.length} events</small></div><div className="event-feed">{snapshot.events.length === 0 && <div className="empty-event">Waiting for kickoff…</div>}{[...snapshot.events].reverse().slice(0, 4).map((event, index) => <EventRow event={event} fixture={fixture} newest={index === 0} key={`${event.minute}-${event.eventType}`} />)}</div></div>
-      {transactionHash && <div className="privacy-note"><ShieldCheck size={16} /><span>{onchain ? "Bradbury entry" : "Studionet transaction"} {transactionHash.slice(0, 10)}…{transactionHash.slice(-6)} · {onchain ? "accepted" : phase.toLowerCase()}</span></div>}
+      {transactionHash && <div className="privacy-note"><ShieldCheck size={16} /><span>{onchain ? "On-chain entry" : "StudioNet transaction"} {transactionHash.slice(0, 10)}…{transactionHash.slice(-6)} · {onchain ? "accepted" : phase.toLowerCase()}</span></div>}
       {error && <p className="error-message">{error}</p>}
       {snapshot.phase === "complete" ? <button className="primary-button" onClick={onContinue} disabled={busy}>{busy ? "Reading GenLayer state…" : onchain ? "Full time · preview result" : "Full time · resolve & reveal"} <Eye size={18} /></button> : <div className="countdown"><Clock3 size={14} /> {Math.ceil(snapshot.remainingSeconds)}s until reveal</div>}
     </div>
@@ -691,20 +703,23 @@ function OnchainRoundPanel({ game }: { game: OnchainGame; previewJackpotQualifie
   const resolveAt = round?.resolve_not_before ? Date.parse(round.resolve_not_before) : Number.POSITIVE_INFINITY;
   const refundAt = round?.refund_at ? Date.parse(round.refund_at) : Number.POSITIVE_INFINITY;
   const canResolve = round?.status === "OPEN" && now >= resolveAt && now < refundAt && round.liquidity_ready !== false;
+  const canStartResolution = canResolve && game.resolution?.status !== "SETTLED";
+  const canDispatchResolution = canResolve && game.resolution?.status === "SETTLED" && !round?.resolution_accepted_at;
   const canRefund = Boolean(round && ["OPEN", "SCORING"].includes(round.status) && (
     now >= refundAt || (now >= Date.parse(round.lock_at) && round.liquidity_ready === false)
   ));
   return (
-    <section className="onchain-round-card" aria-label="Bradbury game position">
-      <header><span>Bradbury position</span><b>{round?.status ?? "LOADING"}</b></header>
+    <section className="onchain-round-card" aria-label={`${game.config.networkLabel} game position`}>
+      <header><span>{game.config.networkLabel} position</span><b>{round?.status ?? "LOADING"}</b></header>
       <dl>
         <div><dt>Your stake</dt><dd>{entry ? `${formatGen(entry.stake_amount)} GEN` : "No entry found"}</dd></div>
         <div><dt>Jackpot</dt><dd>{round ? `${formatGen(round.jackpot_pool)} GEN` : "—"}</dd></div>
         <div><dt>Chain result</dt><dd>{round?.status === "SETTLED" ? (entry?.jackpot_qualified ? "Jackpot qualified" : "Settled") : "Not settled"}</dd></div>
         <div><dt>Claimable</dt><dd>{entry ? `${formatGen(entry.claimable)} GEN` : "—"}</dd></div>
       </dl>
-      {canResolve && <button type="button" onClick={() => void game.resolve()} disabled={game.busy}>Resolve final match evidence</button>}
-      {round?.status === "OPEN" && <p>Entries lock {new Date(round.lock_at).toLocaleString()}. Resolution opens {round.resolve_not_before ? new Date(round.resolve_not_before).toLocaleString() : "after the V2 migration"}.</p>}
+      {canStartResolution && <button type="button" onClick={() => void game.resolve()} disabled={game.busy}>Resolve final match evidence</button>}
+      {canDispatchResolution && <button type="button" onClick={() => void game.dispatch()} disabled={game.busy}>Send finalized consensus to game</button>}
+      {round?.status === "OPEN" && <p>Entries lock {new Date(round.lock_at).toLocaleString()}. Resolution opens {round.resolve_not_before ? new Date(round.resolve_not_before).toLocaleString() : "after the contract migration"}.</p>}
       {round?.status === "SCORING" && <button type="button" onClick={() => void game.process()} disabled={game.busy}>Process jackpot scoring batch</button>}
       {canRefund && <button type="button" onClick={() => void game.activateRefunds()} disabled={game.busy}>Open full refunds</button>}
       {(round?.status === "SETTLED" || round?.status === "REFUNDING") && canClaim && <button type="button" onClick={() => void game.claim()} disabled={game.busy}>Claim {formatGen(entry!.claimable)} GEN</button>}

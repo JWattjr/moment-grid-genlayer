@@ -8,7 +8,8 @@ ROUND_ID = "round-1"
 MATCH_ID = "match-1"
 RESOLUTION_ID = "resolution-1"
 GEN = 10**18
-MINIMUM_STAKE = 10 * GEN
+MINIMUM_STAKE = GEN
+DEFAULT_STAKE = 10 * GEN
 
 
 def pack(moment_ids):
@@ -33,6 +34,7 @@ def address(raw):
 
 GRID_A = pack([1, 4, 7, 10, 13, 16, 19, 22, 25])
 GRID_B = pack([2, 5, 8, 11, 14, 17, 20, 23, 26])
+GRID_C = pack([3, 6, 9, 12, 15, 18, 21, 24, 27])
 GRID_A_DIVERSE = pack([1, 4, 7, 11, 13, 16, 19, 22, 25])
 
 
@@ -44,7 +46,12 @@ def create_round(
     kickoff_at="2026-08-11T13:30:00Z",
     resolve_not_before="2026-08-11T16:00:00Z",
     refund_at="2026-08-12T13:00:00Z",
+    minimum_stake=MINIMUM_STAKE,
+    minimum_participants=2,
+    minimum_total_stake=None,
 ):
+    if minimum_total_stake is None:
+        minimum_total_stake = minimum_stake * minimum_participants
     contract.create_round(
         round_id,
         MATCH_ID,
@@ -54,13 +61,14 @@ def create_round(
         kickoff_at,
         resolve_not_before,
         refund_at,
-        2,
-        20 * GEN,
+        minimum_stake,
+        minimum_participants,
+        minimum_total_stake,
         2,
     )
 
 
-def enter(direct_vm, contract, player, grid=GRID_A, stake=MINIMUM_STAKE, round_id=ROUND_ID):
+def enter(direct_vm, contract, player, grid=GRID_A, stake=DEFAULT_STAKE, round_id=ROUND_ID):
     direct_vm.sender = player
     direct_vm.value = stake
     contract.join_round(round_id, grid)
@@ -104,9 +112,51 @@ def all_grid_a_true():
 
 def test_ten_gen_quote_splits_by_tier_and_fee():
     # Pure numbers document the exact 10 GEN product economics.
-    assert MINIMUM_STAKE * 5 // 100 == GEN // 2
-    assert MINIMUM_STAKE * 10 // 100 == GEN
-    assert MINIMUM_STAKE * 15 // 100 == GEN + GEN // 2
+    assert DEFAULT_STAKE * 5 // 100 == GEN // 2
+    assert DEFAULT_STAKE * 10 // 100 == GEN
+    assert DEFAULT_STAKE * 15 // 100 == GEN + GEN // 2
+
+
+def test_one_gen_quote_preserves_the_nine_pool_weights(direct_deploy):
+    contract = direct_deploy(CONTRACT)
+    assert contract.get_stake_quote(GEN) == {
+        "stake_amount": GEN,
+        "common_per_cell": GEN * 5 // 100,
+        "medium_per_cell": GEN * 10 // 100,
+        "rare_per_cell": GEN * 15 // 100,
+        "pool_total": GEN * 90 // 100,
+        "jackpot": GEN * 5 // 100,
+        "revenue": GEN * 5 // 100,
+    }
+
+
+def test_nine_independent_pools_transfer_each_cells_losing_stakes_to_its_winner(
+    direct_vm, direct_deploy, direct_alice, direct_bob, direct_charlie
+):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    create_round(contract, direct_alice)
+    enter(direct_vm, contract, direct_alice, GRID_A, stake=GEN)
+    enter(direct_vm, contract, direct_bob, GRID_B, stake=GEN)
+    enter(direct_vm, contract, direct_charlie, GRID_C, stake=GEN)
+
+    settle(direct_vm, contract, direct_alice, *all_grid_a_true())
+
+    expected_pool_totals = [GEN * 15 // 100] * 3 + [GEN * 30 // 100] * 3 + [GEN * 45 // 100] * 3
+    expected_option_stakes = [GEN * 5 // 100] * 3 + [GEN * 10 // 100] * 3 + [GEN * 15 // 100] * 3
+    for cell in range(9):
+        pool = contract.get_cell_pool(ROUND_ID, cell)
+        assert pool["total_pool"] == expected_pool_totals[cell]
+        assert pool["option_0_stake"] == expected_option_stakes[cell]
+        assert pool["option_1_stake"] == expected_option_stakes[cell]
+        assert pool["option_2_stake"] == expected_option_stakes[cell]
+        assert pool["winning_stake"] == expected_option_stakes[cell]
+
+    # Alice wins all nine cell pools, including the money staked on the two
+    # losing options in each individual cell, plus the three-player jackpot.
+    assert contract.get_entry(ROUND_ID, address(direct_alice))["claimable"] == GEN * 285 // 100
+    assert contract.get_entry(ROUND_ID, address(direct_bob))["claimable"] == 0
+    assert contract.get_entry(ROUND_ID, address(direct_charlie))["claimable"] == 0
 
 
 def test_payable_entry_allocates_weighted_pools_jackpot_and_revenue(
@@ -144,7 +194,7 @@ def test_payable_entry_allocates_weighted_pools_jackpot_and_revenue(
     }
 
 
-def test_stake_is_variable_above_the_ten_gen_minimum(direct_vm, direct_deploy, direct_alice):
+def test_stake_is_variable_above_the_round_minimum(direct_vm, direct_deploy, direct_alice):
     direct_vm.warp("2026-08-11T12:00:00Z")
     contract = direct_deploy(CONTRACT)
     create_round(contract, direct_alice)
@@ -167,7 +217,7 @@ def test_entry_requires_minimum_value_and_valid_choice_per_cell(
     direct_vm.sender = direct_alice
     direct_vm.value = MINIMUM_STAKE - 1
 
-    with pytest.raises(Exception, match="Minimum stake is 10 GEN"):
+    with pytest.raises(Exception, match="below this round's minimum"):
         contract.join_round(ROUND_ID, GRID_A)
 
     direct_vm.value = 100 * GEN + 1
@@ -178,6 +228,22 @@ def test_entry_requires_minimum_value_and_valid_choice_per_cell(
     invalid_grid = pack([4, 4, 7, 10, 13, 16, 19, 22, 25])
     with pytest.raises(Exception, match="Moment is not valid"):
         contract.join_round(ROUND_ID, invalid_grid)
+
+
+def test_round_can_set_a_higher_immutable_minimum(direct_vm, direct_deploy, direct_alice):
+    direct_vm.warp("2026-08-11T12:00:00Z")
+    contract = direct_deploy(CONTRACT)
+    create_round(contract, direct_alice, minimum_stake=5 * GEN)
+    assert contract.get_round(ROUND_ID)["minimum_stake"] == 5 * GEN
+
+    direct_vm.sender = direct_alice
+    direct_vm.value = 5 * GEN - 1
+    with pytest.raises(Exception, match="below this round's minimum"):
+        contract.join_round(ROUND_ID, GRID_A)
+
+    direct_vm.value = 5 * GEN
+    contract.join_round(ROUND_ID, GRID_A)
+    assert contract.get_entry(ROUND_ID, address(direct_alice))["stake_amount"] == 5 * GEN
 
 
 def test_one_wallet_can_enter_a_round_only_once(direct_vm, direct_deploy, direct_alice):

@@ -11,14 +11,14 @@ Player builds a 3×3 grid and reviews the stake split
 Next.js + wallet sign one payable packed-grid transaction
                          |
                          v
-MomentGridGame V2 on persistent Testnet Bradbury
+MomentGridGame V3 on StudioNet
         |                                    |
         | escrow + nine pools                | registered callback only
         v                                    v
-locked entries                      MatchRoundResolver V2
+locked entries                      MatchRoundResolver V3
                                       |             |
                                       v             v
-                                    ESPN      TheSportsDB
+                                     BBC      TheSportsDB
                                        \       /
                                 independent validators
                                            |
@@ -26,13 +26,13 @@ locked entries                      MatchRoundResolver V2
                          truth + evidence-coverage bitmaps
                                            |
                                            v
-                      authenticated finalized contract message
+                       separate permissionless dispatch message
                                            |
                                            v
                            batched score → claim / refund
 ```
 
-The separate `MatchMomentResolver` deployment on Studionet provides an immediately inspectable reusable TRUE/FALSE/INVALID adjudication proof. It is supplementary evidence, not the payout authority for Bradbury V2.
+The separate `MatchMomentResolver` deployment on StudioNet provides an immediately inspectable reusable TRUE/FALSE/INVALID adjudication proof. It is supplementary evidence, not the payout authority for the V3 game.
 
 ## Responsibilities
 
@@ -63,12 +63,12 @@ The NestJS service is an optional replay/live-feed adapter. It stores normalized
 ## Round lifecycle
 
 1. Governance creates a game round and registers the same immutable match identity, two or three distinct allowlisted evidence URLs, callback address, resolution window, and refund deadline in the resolver.
-2. Before `lock_at`, one wallet may submit one complete packed grid with at least 10 GEN. The game accounts for every wei across nine pools, jackpot, and pending revenue.
+2. Before `lock_at`, one wallet may submit one complete packed grid at or above that round's immutable floor (1 test GEN in the active round). The game accounts for every wei across nine isolated cell pools, jackpot, and pending revenue.
 3. At lock, insufficient participants, liquidity, or unique grids make the round permissionlessly refundable.
 4. After full time and `resolve_not_before`, any account may request resolution. The caller supplies no verdict and cannot replace sources.
 5. Leader and validators fetch the registered pages and independently derive bounded final facts. The equivalence principle compares stable decision fields, not prose.
 6. Resolver code stores agreed truth and evidence-coverage bitmaps. Missing coverage remains explicit; material identity/source conflict stays retryable.
-7. After finalization, the resolver sends the bitmaps to the configured game callback. If delivery fails, anyone may redispatch the stored result.
+7. After consensus is durably stored, anyone sends the bitmaps to the configured game callback in a separate `dispatch_resolution` transaction. If delivery fails, anyone may retry it.
 8. Anyone processes entrants in batches. The game refunds unsupported cell choices, distributes regular pools, totals jackpot qualifiers, rolls or opens the jackpot, and releases protocol revenue only after successful settlement.
 9. Each wallet pulls its own claim. If evidence or scoring misses `refund_at`, anyone may activate full refunds and each entrant reclaims the gross stake.
 
@@ -79,11 +79,11 @@ The NestJS service is an optional replay/live-feed adapter. It stores normalized
 - Two distinct allowlisted publishers must be available and materially consistent.
 - Missing evidence is never silently converted to FALSE.
 - The resolver callback is authenticated; owner and frontend cannot inject bitmaps.
-- Round liquidity and unique-grid floors prevent the one-player guaranteed-loss case.
+- Round liquidity and unique-grid floors prevent the one-player guaranteed-loss case. Two disclosed fixed-grid bots satisfy the baseline gate without being counted as organic users or human leaderboard entries.
 - Accepted lifecycle status alone is not treated as execution success; writes wait for finalization and verify `FINISHED_WITH_RETURN`.
 - The replay and local previews never produce claimable balances.
 - Pause blocks new exposure but cannot block settlement, claims, refunds, or withdrawals.
-- Owner transfer is two-step. Controlled Test Bot and QA activity are publicly labeled.
+- Owner transfer is two-step. Disclosed player bots and historical QA activity are publicly labeled.
 - Private keys and account passwords are never accepted by repository scripts.
 
 Exact payout accounting is in [ONCHAIN_GAME.md](ONCHAIN_GAME.md). Source allowlisting, disagreement, and finality policies are in [GENLAYER_SOURCE_POLICY.md](GENLAYER_SOURCE_POLICY.md).

@@ -7,7 +7,7 @@ make nine match-moment calls, watch every square settle from validator-agreed
 public evidence, and complete a horizontal row plus a diagonal to share the
 rolling jackpot.
 
-## Implemented in V2
+## Implemented in V3
 
 - Contract-authoritative grids, marks, line counts, claims, and leaderboard.
 - Future kickoff and post-match evidence windows.
@@ -16,27 +16,33 @@ rolling jackpot.
 - Permissionless resolution retry, callback redispatch, batched scoring,
   scoring-timeout recovery, refunds, and claims.
 - Transparent live pool backing and exact stake allocation.
+- Immutable per-round minimums down to 1 GEN and nine economically isolated
+  cell ledgers; a cell can never subsidize a different cell.
+- Two disclosed, precommitted fixed-grid player bots plus a separate
+  permissionless keeper policy. Bots are excluded from human standings.
+- Resolver consensus persists before a separate callback dispatch, removing
+  the child-callback ordering flaw observed in the Bradbury V2 rehearsal.
 - Persistent rounds, wallet entries, real standings, finalization progress,
   wrong-network recovery, faucet access, integrity, and responsible-play pages.
 - Two-step ownership and a pause that cannot block exits.
 
 ## Testnet launch gate
 
-- [x] Deploy fresh V2 game and resolver contracts and verify both report
-  version `2.0.0` with the expected schemas.
-- [x] Register the 21 August 2026 Arsenal–Coventry fixture with match-specific
-  ESPN and TheSportsDB URLs.
-- [ ] Complete the armed two-wallet Bradbury rehearsal: both distinct-grid
-  entries are escrowed; post-match attempts correctly returned
-  `SOURCE_UNAVAILABLE` with no scoring because only one publisher was reachable.
-  At the deadline, activate full refunds, claim from both wallets, and record
-  before/after balances and receipts (or record settlement claims if two-source
-  evidence becomes available first).
+- [x] Deploy fresh V3 game and resolver contracts on StudioNet and verify both
+  report version `3.0.0` with finalized successful receipts.
+- [x] Register the 21 August 2026 Arsenal–Coventry fixture with BBC and
+  TheSportsDB URLs, a 1 GEN floor, and explicit post-match/refund windows.
+- [x] Seed Form Bot and Chaos Bot at 1 test GEN each with public fixed grids;
+  verify two participants, two unique grids, 2 GEN escrow, and liquidity ready.
+- [x] Preserve and document the Bradbury V2 rehearsal discrepancy. The game
+  settled and both controlled wallets claimed while the resolver record stayed
+  pending, proving automatic child callbacks were unsafe. V3 requires a
+  separate permissionless dispatch after durable consensus.
 - [x] Record accepted deployment receipts in `deployments/genlayer/`.
-- Record finality once Bradbury advances the accepted receipts beyond status 5.
-- [x] Update Vercel environment variables and visually verify the public game,
+- [x] Record StudioNet finality and successful execution for both V3 deployments.
+- [ ] Update Vercel environment variables and visually verify the public game,
   rounds, entries, consensus proof, integrity, and responsible-play routes.
-- [ ] Publish a 90-second reviewer recording after the payout rehearsal closes.
+- [ ] Publish a 90-second reviewer recording after the StudioNet V3 release is live.
 
 ## Mainnet / real-value blockers
 

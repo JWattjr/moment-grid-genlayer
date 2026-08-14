@@ -2,17 +2,17 @@
 
 **A 3×3 football prediction game with native-GEN pools settled from public match evidence by GenLayer validator consensus.**
 
-[Play the Bradbury testnet demo](https://moment-grid-genlayer.vercel.app) · [Inspect live consensus proof](https://moment-grid-genlayer.vercel.app/genlayer) · [Browse deployed game contract](https://explorer-bradbury.genlayer.com/address/0x1D87C32c1A0D65C083ce322608D284E5767b8408)
+[Play the StudioNet game](https://moment-grid-genlayer.vercel.app) · [Inspect live consensus proof](https://moment-grid-genlayer.vercel.app/genlayer) · [Review deployment receipts](deployments/genlayer/studionet.json)
 
 ## Reviewer quick path
 
 1. Open the [live game](https://moment-grid-genlayer.vercel.app) and build nine calls across three time windows and rarity tiers.
-2. Review the stake split before signing. The minimum 10 GEN entry allocates 1.5 GEN to Common pools, 3 GEN to Medium, 4.5 GEN to Rare, 0.5 GEN to the jackpot, and 0.5 GEN to pending protocol revenue.
+2. Review the stake split before signing. The minimum 1 GEN entry allocates 0.05 GEN to each Common cell, 0.10 to each Medium cell, 0.15 to each Rare cell, 0.05 to the jackpot, and 0.05 to pending protocol revenue.
 3. Open [Rounds](https://moment-grid-genlayer.vercel.app/rounds) to inspect contract-read liquidity, entries, and clearly disclosed controlled test accounts.
 4. Open [Live proof](https://moment-grid-genlayer.vercel.app/genlayer) to inspect settled TRUE and FALSE results produced from BBC and ESPN evidence by the reusable Studionet resolver.
-5. Review [Integrity](https://moment-grid-genlayer.vercel.app/integrity), the [deployment manifest](deployments/genlayer/bradbury.json), and the [full game specification](docs/ONCHAIN_GAME.md).
+5. Review [Integrity](https://moment-grid-genlayer.vercel.app/integrity), the [StudioNet deployment manifest](deployments/genlayer/studionet.json), and the [full game specification](docs/ONCHAIN_GAME.md).
 
-No wallet is required to inspect rounds, contract state, consensus records, rules, or the trust model. A funded Bradbury wallet is required only to enter or operate the active testnet round.
+No wallet is required to inspect rounds, contract state, consensus records, rules, or the trust model. A compatible wallet is required only to sign an entry or permissionless lifecycle action on StudioNet.
 
 ## The trust problem
 
@@ -23,17 +23,17 @@ Moment Grid registers the match and evidence policy before play. GenLayer valida
 ## End-to-end on-chain lifecycle
 
 ```text
-Player signs one payable packed grid on Bradbury
+Player signs one payable packed grid on StudioNet
                          ↓
 MomentGridGame escrows GEN across nine pools + jackpot
                          ↓
 Entries lock before kickoff; definitions stay immutable
                          ↓
-MatchRoundResolver reads registered ESPN / TheSportsDB evidence
+MatchRoundResolver reads registered BBC / TheSportsDB evidence
                          ↓
 Independent validators agree on truth + coverage bitmaps
                          ↓
-Authenticated finalized callback reaches MomentGridGame
+Stored consensus is dispatched to MomentGridGame in a second transaction
                          ↓
 Permissionless batched scoring opens claims or full refunds
 ```
@@ -42,8 +42,8 @@ The LLM interprets public evidence; deterministic contract code scores grids, to
 
 ## Game economy
 
-- The minimum stake is 10 GEN; the testnet UI caps a single entry at 100 GEN.
-- Every stake backs nine transparent pari-mutuel cell pools: 15% Common, 30% Medium, and 45% Rare.
+- The minimum stake for the active round is 1 GEN; the testnet UI caps a single entry at 100 GEN.
+- Every stake backs nine independent pari-mutuel cell pools: each Common cell receives 5%, each Medium cell 10%, and each Rare cell 15%. A cell's balance never pays another cell.
 - The jackpot receives 5%; pending protocol revenue receives 5% and becomes withdrawable only after successful settlement.
 - A player qualifies for the jackpot by completing at least one horizontal row and one diagonal. Qualifiers share it pro rata by gross stake; without a qualifier, it rolls into the next round.
 - Each round requires configured minimum participant, liquidity, and unique-grid gates. Failure opens a full-stake refund path.
@@ -52,19 +52,23 @@ Detailed accounting and failure behavior are in [docs/ONCHAIN_GAME.md](docs/ONCH
 
 ## Live deployments
 
-### Testnet Bradbury V2
+### StudioNet V3 — active playable round
 
 | Item | Value |
 | --- | --- |
-| Network | Testnet Bradbury · chain 4221 |
-| Game | [`0x1D87C32c1A0D65C083ce322608D284E5767b8408`](https://explorer-bradbury.genlayer.com/address/0x1D87C32c1A0D65C083ce322608D284E5767b8408) |
-| Full-match resolver | [`0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB`](https://explorer-bradbury.genlayer.com/address/0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB) |
-| Contract version | `2.0.0` on both deployments |
-| Public round | `epl-2026-08-21-arsenal-coventry-v2` |
-| Public round state | OPEN · 2 entries · 2 unique grids · 20 GEN escrow · liquidity gate met |
-| Controlled QA round | `qa-2026-08-13-motagua-cartagines-v1` · two test wallets · source-failure/refund rehearsal in progress |
+| Network | StudioNet · chain 61999 |
+| Game | `0x9f95bDD3E4a2479b8f628599cc672E7a519C0920` |
+| Full-match resolver | `0xDa0569bE8c8d148D3F2f6Fba5aC00a39bFc64590` |
+| Contract version | `3.0.0` on both deployments |
+| Public round | `epl-2026-08-21-arsenal-coventry-studionet-v3` |
+| Public round state | OPEN · 2 disclosed bots · 2 unique grids · 2 test GEN escrow · liquidity gate met |
+| Minimum entry | 1 test GEN |
 
-The public round contains one human-controlled entry and one explicitly labeled fixed-grid Test Bot. The QA round contains two controlled wallets and is never presented as organic liquidity. Its first post-match adjudications found only one of the two registered publishers reachable, returned `SOURCE_UNAVAILABLE`, and left the round unscored with all 20 GEN escrowed. The keeper is armed to activate full refunds at the deadline and claim both gross stakes. Exact addresses, inputs, receipts, failed-attempt audit history, and current state are recorded in [deployments/genlayer/bradbury.json](deployments/genlayer/bradbury.json).
+Form Bot and Chaos Bot each committed a distinct public fixed grid and exactly 1 test GEN before human play. They provide disclosed baseline liquidity, are never described as organic users, and are excluded from the human leaderboard. Every one of the nine cells keeps an independent pool and option ledger. Exact inputs, receipts, and state are recorded in [deployments/genlayer/studionet.json](deployments/genlayer/studionet.json).
+
+### Preserved Bradbury V2
+
+The prior Bradbury V2 contracts and positions remain recorded in [deployments/genlayer/bradbury.json](deployments/genlayer/bradbury.json), and the Integrity page links to the preserved V2 release for recovery. New public play has moved to StudioNet V3. The earlier QA round exposed a callback-order failure: the game reached settlement while the resolver record remained pending. V3 removes automatic callback dispatch, so consensus must persist first and a separate permissionless transaction sends it to the game.
 
 ### Reusable Studionet resolver proof
 
@@ -77,7 +81,7 @@ The public round contains one human-controlled entry and one explicitly labeled 
 | Consensus | `MAJORITY_AGREE` · successful execution |
 | Evidence | BBC Sport + ESPN |
 
-[`MatchMomentResolver`](contracts/match_moment_resolver.py) is a reusable, application-neutral contract for one constrained football criterion. Its settled records give reviewers an immediately inspectable consensus proof while the future Bradbury fixture remains open.
+[`MatchMomentResolver`](contracts/match_moment_resolver.py) is a reusable, application-neutral contract for one constrained football criterion. Its settled records give reviewers an immediately inspectable consensus proof while the active StudioNet fixture remains open.
 
 ## Repository map
 
@@ -105,7 +109,7 @@ pnpm --filter @moment-grid/scoring build
 pnpm --filter web dev
 ```
 
-Open `http://localhost:3003`. The checked-in environment example points at the public Bradbury V2 game and Studionet resolver proof. Never add a private key, account password, or provider secret to an environment file.
+Open `http://localhost:3003`. The checked-in environment example points at the public StudioNet V3 game and reusable resolver proof. Never add a private key, account password, or provider secret to an environment file.
 
 ## Verification
 
@@ -125,7 +129,7 @@ pnpm build
 pnpm --filter web test:e2e
 ```
 
-Current Direct Mode result: **46 passed** across registration, access control, web-evidence failure modes, consensus fields, payable stake accounting, liquidity gates, validity refunds, batched scoring, jackpot sharing/rollover, claims, and timeout recovery. All three Intelligent Contracts pass `genvm-lint check`.
+Current Direct Mode result: **49 passed** across registration, access control, web-evidence failure modes, consensus fields, one-GEN and per-round stake floors, nine isolated pool ledgers, liquidity gates, validity refunds, batched scoring, jackpot sharing/rollover, claims, and timeout recovery. All three Intelligent Contracts pass `genvm-lint check`.
 
 ## Security and launch status
 
@@ -133,7 +137,7 @@ Current Direct Mode result: **46 passed** across registration, access control, w
 - At least two distinct allowlisted publishers must be available and materially consistent.
 - Caller-supplied verdicts are rejected; only the configured resolver can deliver finalized bitmaps.
 - Ownership transfer is two-step, and pausing cannot block exits, claims, or refunds.
-- Test Bot and controlled QA activity are publicly labeled in both UI and manifests.
+- Form Bot, Chaos Bot, and historical controlled QA activity are publicly labeled in UI and manifests.
 - This is unaudited testnet software. Mainnet or real-value launch remains blocked on independent contract/economic review, governed ownership, monitoring, legal and licensing analysis, age/location controls, self-exclusion and safer-play controls, and an incident/appeals process.
 
 See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/GENLAYER_SOURCE_POLICY.md](docs/GENLAYER_SOURCE_POLICY.md), [docs/PRODUCT_ROADMAP.md](docs/PRODUCT_ROADMAP.md), and [docs/RESPONSIBLE_PLAY.md](docs/RESPONSIBLE_PLAY.md).
@@ -142,7 +146,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/GENLAYER_SOURCE_POLICY.m
 
 - [Ready-to-paste Project contribution](docs/GENLAYER_SUBMISSION.md)
 - [Reviewer demo recording script](docs/DEMO_SCRIPT.md)
-- [Bradbury operation and payout rehearsal](docs/BRADBURY_GAME_RUNBOOK.md)
+- [StudioNet V3 operation](docs/STUDIONET_RUNBOOK.md)
+- [Preserved Bradbury V2 operation and payout rehearsal](docs/BRADBURY_GAME_RUNBOOK.md)
 - [Studionet reusable resolver runbook](docs/STUDIONET_RUNBOOK.md)
 
 Source is public for review. No open-source license has been granted yet; all rights remain reserved until the owner chooses a license.

@@ -10,7 +10,7 @@ BBC_URL = "https://www.bbc.co.uk/sport/football/demo"
 ESPN_URL = "https://www.espn.co.uk/football/match/_/gameId/demo"
 
 
-def register(contract):
+def register(contract, settlement_target="0x0000000000000000000000000000000000000000"):
     from genlayer import Address
 
     contract.register_round(
@@ -21,7 +21,7 @@ def register(contract):
         "Premier League",
         "2024-05-04",
         json.dumps([BBC_URL, ESPN_URL], separators=(",", ":")),
-        Address("0x0000000000000000000000000000000000000000"),
+        Address(settlement_target),
         "game-round-1",
         "2026-08-11T13:00:00Z",
         "2026-08-12T13:00:00Z",
@@ -71,10 +71,12 @@ def bitmap(*moment_ids):
     return value
 
 
-def test_resolves_all_twenty_seven_moments_into_three_stable_bitmaps(direct_vm, direct_deploy):
+def test_resolves_all_twenty_seven_moments_into_three_stable_bitmaps(
+    direct_vm, direct_deploy, direct_alice
+):
     direct_vm.warp("2026-08-11T12:00:00Z")
     contract = direct_deploy(CONTRACT)
-    register(contract)
+    register(contract, direct_alice)
     mock_sources(direct_vm)
     mock_facts(direct_vm)
 
@@ -92,6 +94,12 @@ def test_resolves_all_twenty_seven_moments_into_three_stable_bitmaps(direct_vm, 
     assert result["window_0_valid_bitmap"] == bitmap(1, 2, 3, 10, 11, 12, 19, 20, 21)
     assert result["window_1_valid_bitmap"] == bitmap(4, 5, 6, 13, 14, 15, 22, 23, 24)
     assert result["window_2_valid_bitmap"] == bitmap(7, 8, 9, 16, 17, 18, 25, 26, 27)
+    assert result["dispatch_count"] == 0
+
+    # Persist consensus first. Dispatch is a separate permissionless
+    # transaction so a callback can never outrun the resolver's durable state.
+    contract.dispatch_resolution(RESOLUTION_ID)
+    assert contract.get_round_resolution(RESOLUTION_ID)["dispatch_count"] == 1
 
 
 def test_live_match_remains_retryable(direct_vm, direct_deploy):

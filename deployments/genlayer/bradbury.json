@@ -82,7 +82,7 @@
         "minimum_participants": 2,
         "minimum_total_stake_wei": "20000000000000000000",
         "minimum_unique_grids": 2,
-        "status": "OPEN",
+        "status": "SETTLED",
         "resolver_status": "PENDING",
         "participant_count": 2,
         "unique_grid_count": 2,
@@ -90,7 +90,7 @@
         "total_escrow_wei": "20000000000000000000",
         "jackpot_pool_wei": "1000000000000000000",
         "resolution_observation": {
-          "verified_at": "2026-08-13T09:24:51Z",
+          "verified_at": "2026-08-14T00:00:00Z",
           "status": "PENDING",
           "attempt_count": 3,
           "reason_code": "SOURCE_UNAVAILABLE",
@@ -103,9 +103,11 @@
             "0x33621966b7302de97ebbc4fec47db845dd3a9f379cc4e42caf3dfcb97bb3e26b"
           ],
           "not_voted_transaction": "0x759cbb583d714dfae4456355c36e920603679f101fa9da748204c186575c7643",
-          "game_status": "OPEN",
+          "game_status": "SETTLED",
           "settlement_cursor": 0,
-          "expected_safe_exit": "Activate full refunds after 2026-08-14T06:00:00Z if two-source evidence remains unavailable, then claim both gross stakes."
+          "total_claimed_wei": "18000000000000000000",
+          "both_entries_claimed": true,
+          "final_outcome": "The game used its refund-safe exit after the resolver remained PENDING with SOURCE_UNAVAILABLE. Both entries claimed the distributable 18 GEN; the V2 automatic callback ordering flaw is removed in V3 by separating resolution from dispatch."
         },
         "owner_grid_moment_ids": [1, 4, 7, 10, 13, 16, 19, 22, 25],
         "test_bot_grid_moment_ids": [3, 6, 9, 12, 15, 18, 21, 24, 27],

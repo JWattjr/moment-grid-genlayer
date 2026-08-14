@@ -56,9 +56,18 @@ test("player can random-fill, review, and lock the demo grid", async ({ page }) 
   if (await legacyGuard.isVisible()) {
     await expect(page.getByRole("button", { name: /review 10 gen stake/i })).toBeDisabled();
   } else {
-    await page.getByRole("button", { name: "Lock & start replay" }).click();
+    await page.getByRole("button", { name: "Lock & start replay" }).click({ force: true });
     await expect(page.getByText("Your predictions are locked")).toBeVisible();
   }
+});
+
+test("rules explain the one GEN nine-pool economy", async ({ page }) => {
+  await page.goto("/rules");
+  await expect(page.getByText(/Stake from 1 GEN and commit all nine calls/i)).toBeVisible();
+  await expect(page.getByText("Back nine unique pools")).toBeVisible();
+  await expect(page.getByText(/each Common pool receives 0\.05/i)).toBeVisible();
+  await expect(page.getByText(/each Medium pool 0\.10/i)).toBeVisible();
+  await expect(page.getByText(/each Rare pool 0\.15/i)).toBeVisible();
 });
 
 for (const scenario of ["TRUE", "FALSE", "INVALID"] as const) {

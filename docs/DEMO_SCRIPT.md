@@ -8,13 +8,13 @@ Open `https://moment-grid-genlayer.vercel.app`.
 
 Say: “Moment Grid is football bingo with real on-chain pools. Players lock nine granular match calls before kickoff. Those calls cannot be settled safely by one frontend or a final-score feed.”
 
-Show the Arsenal–Coventry match card, Bradbury V2 label, and the Pick → Lock → Resolve → Score rail.
+Show the Arsenal–Coventry match card, StudioNet V3 label, and the Pick → Lock → Resolve → Score rail.
 
 ## 12–28 seconds — Grid and native GEN stake
 
 Fill the grid, open Review, and change the stake input.
 
-Say: “One payable transaction stores the packed grid and splits at least 10 testnet GEN across three Common, three Medium, and three Rare pari-mutuel pools, plus a rolling jackpot and pending protocol revenue.”
+Say: “One payable transaction stores the packed grid. From a 1 test GEN minimum, each of the nine squares receives its own independent loser-funded pool; rarity controls only how much goes into that cell.”
 
 Show the exact allocation and confirmation card. Stop before signing unless a fresh test entry has been planned.
 
@@ -22,9 +22,9 @@ Show the exact allocation and confirmation card. Stop before signing unless a fr
 
 Open `/rounds`.
 
-Say: “Rounds, liquidity, unique grids, lock times, and jackpot balances are read from the Bradbury game contract. Controlled test liquidity is disclosed. Underfilled rounds void instead of pretending a player won.”
+Say: “Rounds, liquidity, unique grids, lock times, and jackpot balances are read from the StudioNet game contract. Form Bot and Chaos Bot are fixed, disclosed, and excluded from human standings. Underfilled rounds void.”
 
-Show the active future round and the labeled QA rehearsal. Do not call the QA wallets users.
+Show the active future round and both disclosed bot labels. Do not call the bots organic users.
 
 ## 43–59 seconds — Why GenLayer is central
 
@@ -46,7 +46,7 @@ Show `Settled FALSE`, `NO_PENALTY_IN_WINDOW`, and Moment Grid impact.
 
 Open `/integrity`.
 
-Say: “The Bradbury resolver sends finalized truth and evidence-coverage bitmaps to the game. Unsupported calls refund their affected pool stake. Failed liquidity, unresolved evidence, or stalled scoring opens full permissionless refunds. Claims are pull-based.”
+Say: “The resolver stores validator consensus first. A second permissionless transaction dispatches truth and evidence coverage to the game. Unsupported calls refund their affected cell stake. Failed liquidity, unresolved evidence, or stalled scoring opens full refunds.”
 
 Show the immutable entry, independent validator, recovery, source, and proof cards.
 
@@ -61,7 +61,7 @@ End on the live URL and GitHub repository URL.
 ## Recording acceptance checklist
 
 - The browser address bar shows the public Vercel domain.
-- Bradbury V2 and testnet GEN are stated clearly.
+- StudioNet V3 and test GEN are stated clearly.
 - At least one live contract-read round is visible.
 - Both a settled TRUE and settled FALSE resolver record appear.
 - Controlled test accounts are disclosed.

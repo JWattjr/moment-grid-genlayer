@@ -14,10 +14,12 @@ import {
   readCellPools,
   readGameEntry,
   readGameRound,
+  readGameRoundResolution,
   resolveGameRound,
   type GameCellPool,
   type GameEntryRecord,
   type GameRoundRecord,
+  type GameRoundResolutionRecord,
 } from "./genlayer-game";
 import type { GenLayerProvider } from "./genlayer-resolver";
 
@@ -29,6 +31,7 @@ export function useOnchainGame(selectedRoundId = genLayerGameConfig.roundId) {
   const { address, connector } = useAccount();
   const [round, setRound] = useState<GameRoundRecord | null>(null);
   const [entry, setEntry] = useState<GameEntryRecord | null>(null);
+  const [resolution, setResolution] = useState<GameRoundResolutionRecord | null>(null);
   const [pools, setPools] = useState<GameCellPool[]>([]);
   const [action, setAction] = useState<OnchainGameAction>("IDLE");
   const [transactionStage, setTransactionStage] = useState<TransactionStage>("IDLE");
@@ -37,14 +40,16 @@ export function useOnchainGame(selectedRoundId = genLayerGameConfig.roundId) {
 
   const refresh = useCallback(async () => {
     if (!genLayerGameConfig.enabled || !selectedRoundId) return;
-    const [nextRound, nextEntry, nextPools] = await Promise.all([
+    const [nextRound, nextEntry, nextPools, nextResolution] = await Promise.all([
       readGameRound(selectedRoundId),
       address ? readGameEntry(address, selectedRoundId) : Promise.resolve(null),
       readCellPools(selectedRoundId),
+      readGameRoundResolution(selectedRoundId),
     ]);
     setRound(nextRound);
     setEntry(nextEntry);
     setPools(nextPools);
+    setResolution(nextResolution);
   }, [address, selectedRoundId]);
 
   useEffect(() => {
@@ -53,11 +58,14 @@ export function useOnchainGame(selectedRoundId = genLayerGameConfig.roundId) {
       try {
         await refresh();
       } catch (caught) {
-        if (active) setError(caught instanceof Error ? caught.message : "Unable to read the Bradbury game round.");
+        if (active) setError(caught instanceof Error ? caught.message : "Unable to read the on-chain game round.");
       }
     };
     void load();
-    const timer = window.setInterval(() => void load(), 20_000);
+    // One refresh reads the round, resolver, wallet entry, and all nine cell
+    // pools. StudioNet currently permits roughly 30 requests per minute, so a
+    // one-minute cadence keeps the complete audit view below that boundary.
+    const timer = window.setInterval(() => void load(), 60_000);
     return () => { active = false; window.clearInterval(timer); };
   }, [refresh]);
 
@@ -97,7 +105,7 @@ export function useOnchainGame(selectedRoundId = genLayerGameConfig.roundId) {
 
   const enter = useCallback(async (grid: PredictionId[], stakeInput: string) => {
     try {
-      const stake = parseStake(stakeInput);
+      const stake = parseStake(stakeInput, round?.minimum_stake, round?.maximum_stake);
       return run("ENTERING", (account, signingProvider, onSubmitted) => (
         enterGameRound(account, signingProvider, grid, stake, selectedRoundId, onSubmitted)
       ));
@@ -107,7 +115,7 @@ export function useOnchainGame(selectedRoundId = genLayerGameConfig.roundId) {
       setError(caught instanceof Error ? caught.message : "The stake amount is invalid.");
       return false;
     }
-  }, [run, selectedRoundId]);
+  }, [round, run, selectedRoundId]);
 
   const resolutionId = round?.resolver_resolution_id ?? selectedRoundId;
   return {
@@ -115,6 +123,7 @@ export function useOnchainGame(selectedRoundId = genLayerGameConfig.roundId) {
     config: { ...genLayerGameConfig, roundId: selectedRoundId },
     round,
     entry,
+    resolution,
     pools,
     action,
     transactionStage,

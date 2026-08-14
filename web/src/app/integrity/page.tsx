@@ -6,6 +6,7 @@ import { PrototypeShell } from "@/components/prototype-shell";
 export const metadata: Metadata = { title: "Integrity — Moment Grid", description: "How Moment Grid protects entries and settles match evidence." };
 
 export default function IntegrityPage() {
+  const bradburyRecoveryUrl = process.env.NEXT_PUBLIC_BRADBURY_V2_APP_URL;
   return <PrototypeShell eyebrow="Trust model" title="Know what decides your payout." intro="The frontend previews the match. Only finalized contract state decides marks, claims, refunds, and jackpot eligibility.">
     <section className="rules-list">
       <article><span>01</span><div className="rule-icon"><Database size={17} /></div><div><strong>Immutable entry</strong><p>Your nine choices and gross stake are stored on-chain after transaction finalization.</p></div></article>
@@ -15,8 +16,9 @@ export default function IntegrityPage() {
     </section>
     <section className="proof-links" aria-label="Public verification links">
       <Link href="/genlayer"><ShieldCheck size={15} /><span><strong>Inspect live consensus</strong><small>Settled TRUE and FALSE records from the reusable Studionet resolver.</small></span></Link>
-      <a href="https://github.com/JWattjr/moment-grid-genlayer" target="_blank" rel="noreferrer"><ExternalLink size={15} /><span><strong>Review source and receipts</strong><small>Contracts, 46 direct tests, deployment manifests, and operating runbooks.</small></span></a>
+      <a href="https://github.com/JWattjr/moment-grid-genlayer" target="_blank" rel="noreferrer"><ExternalLink size={15} /><span><strong>Review source and receipts</strong><small>Contracts, 49 direct tests, deployment manifests, and operating runbooks.</small></span></a>
+      {bradburyRecoveryUrl && <a href={bradburyRecoveryUrl} target="_blank" rel="noreferrer"><ExternalLink size={15} /><span><strong>Open Bradbury V2 recovery</strong><small>Existing Bradbury positions remain available on the preserved V2 release.</small></span></a>}
     </section>
-    <div className="prototype-note"><ShieldCheck size={15} /><span>Moment Grid V2 is testnet software, not an audited mainnet gambling product. Contract source, test vectors, and deployment records are public in the repository.</span></div>
+    <div className="prototype-note"><ShieldCheck size={15} /><span>Moment Grid V3 is testnet software, not an audited mainnet gambling product. Contract source, test vectors, and deployment records are public in the repository.</span></div>
   </PrototypeShell>;
 }
