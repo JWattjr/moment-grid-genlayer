@@ -3,18 +3,21 @@
 import Link from "next/link";
 import { ReceiptText, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useAccount } from "wagmi";
-import { formatGen, readGameEntry, readGameRounds, type GameEntryRecord, type GameRoundRecord } from "@/lib/genlayer-game";
+import { useAccount, useChainId, useSwitchChain } from "wagmi";
+import { formatGen, genLayerGameConfig, readGameEntry, readGameRounds, type GameEntryRecord, type GameRoundRecord } from "@/lib/genlayer-game";
 import { useOnchainGame } from "@/lib/use-onchain-game";
 
 type Position = { round: GameRoundRecord; entry: GameEntryRecord };
 
 export function EntriesClient() {
   const { address } = useAccount();
+  const chainId = useChainId();
+  const { switchChain } = useSwitchChain();
+  const wrongNetwork = Boolean(address && chainId !== genLayerGameConfig.chainId);
   const [positions, setPositions] = useState<Position[]>([]);
   const [loading, setLoading] = useState(false);
   useEffect(() => {
-    if (!address) return;
+    if (!address || wrongNetwork) return;
     let active = true;
     const frame = window.requestAnimationFrame(() => setLoading(true));
     void readGameRounds().then(async (rounds) => {
@@ -22,9 +25,10 @@ export function EntriesClient() {
       if (active) setPositions(records.filter((value): value is Position => Boolean(value.entry)));
     }).finally(() => { if (active) setLoading(false); });
     return () => { active = false; window.cancelAnimationFrame(frame); };
-  }, [address]);
+  }, [address, wrongNetwork]);
 
   if (!address) return <div className="prototype-note"><ReceiptText size={15} />Connect the wallet that entered a round to recover its position and claim path.</div>;
+  if (wrongNetwork) return <div className="prototype-note"><ReceiptText size={15} /><span>Moment Grid entries live on {genLayerGameConfig.networkLabel}. Switch networks to read this wallet&apos;s positions.</span><button className="primary-button" onClick={() => switchChain({ chainId: genLayerGameConfig.chainId })}>Switch to {genLayerGameConfig.networkLabel}</button></div>;
   if (loading) return <div className="prototype-note">Reading your on-chain entries…</div>;
   if (!positions.length) return <div className="prototype-note">No entries were found for this wallet.</div>;
   return <section className="round-list">{positions.map(({ round }) => <PositionCard key={round.round_id} roundId={round.round_id} />)}</section>;

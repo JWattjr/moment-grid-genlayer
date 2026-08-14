@@ -40,7 +40,7 @@ rolling jackpot.
   separate permissionless dispatch after durable consensus.
 - [x] Record accepted deployment receipts in `deployments/genlayer/`.
 - [x] Record StudioNet finality and successful execution for both V3 deployments.
-- [ ] Update Vercel environment variables and visually verify the public game,
+- [x] Update Vercel environment variables and visually verify the public game,
   rounds, entries, consensus proof, integrity, and responsible-play routes.
 - [ ] Publish a 90-second reviewer recording after the StudioNet V3 release is live.
 
