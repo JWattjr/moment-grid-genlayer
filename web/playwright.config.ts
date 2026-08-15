@@ -6,7 +6,7 @@ export default defineConfig({
   retries: process.env.CI ? 2 : 0,
   reporter: "list",
   use: {
-    baseURL: "http://localhost:3003",
+    baseURL: process.env.PLAYWRIGHT_BASE_URL ?? "http://localhost:3003",
     trace: "retain-on-failure",
   },
   webServer: process.env.PLAYWRIGHT_EXTERNAL_SERVER === "1" ? undefined : {

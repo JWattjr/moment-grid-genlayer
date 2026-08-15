@@ -94,6 +94,50 @@
     },
     "accepted_state_verified_at": "2026-08-15T13:25:00Z"
   },
+  "additional_rounds": [
+    {
+      "round_id": "epl-2026-08-22-hull-man-united-bradbury-v3",
+      "match_id": "epl-hull-man-united-2026-08-22",
+      "home_team": "Hull City",
+      "away_team": "Manchester United",
+      "kickoff_at": "2026-08-22T11:30:00Z",
+      "minimum_stake_wei": "1000000000000000000",
+      "status": "OPEN",
+      "participant_count": 1,
+      "unique_grid_count": 1,
+      "resolver_registration_transaction": "0xbb25d3837c14cc67c670904744c5d425e7094b7a9f44913676307374b1586dc9",
+      "game_round_creation_transaction": "0xc61a4338a412059e5992f4c2b8b27edb3bf65d334a039b37edb999b2bac6ec76",
+      "form_bot_entry_transaction": "0x634def3ba4d63c1bc6b27a722dae84585d3cd219465e3dc069959715ec0a2360"
+    },
+    {
+      "round_id": "epl-2026-08-23-man-city-bournemouth-bradbury-v3",
+      "match_id": "epl-man-city-bournemouth-2026-08-23",
+      "home_team": "Manchester City",
+      "away_team": "AFC Bournemouth",
+      "kickoff_at": "2026-08-23T14:00:00Z",
+      "minimum_stake_wei": "1000000000000000000",
+      "status": "OPEN",
+      "participant_count": 1,
+      "unique_grid_count": 1,
+      "resolver_registration_transaction": "0xd9d8a58b1316863b2d9858d058d48799cc131be570296d61ac326028cbb9f94b",
+      "game_round_creation_transaction": "0x9f3beae3b0cf42dce8d03839122c2a29dbf75ba93e49f902812236688cdb42de",
+      "form_bot_entry_transaction": "0x84494bd2e619ea51c2c08f8ac3edd00a07be3e300cd56e3160d8c406eab983b0"
+    },
+    {
+      "round_id": "epl-2026-08-23-newcastle-liverpool-bradbury-v3",
+      "match_id": "epl-newcastle-liverpool-2026-08-23",
+      "home_team": "Newcastle United",
+      "away_team": "Liverpool",
+      "kickoff_at": "2026-08-23T15:30:00Z",
+      "minimum_stake_wei": "1000000000000000000",
+      "status": "OPEN",
+      "participant_count": 1,
+      "unique_grid_count": 1,
+      "resolver_registration_transaction": "0x9c7aadd967623a138718bb6452e887be0307d4342d004b7c0b3584805263c562",
+      "game_round_creation_transaction": "0xc9eab6ec5b2ba8797975eaf708bc9511c0f8d02563c2c2c0abc6a30543add862",
+      "form_bot_entry_transaction": "0x35865f8e2abfc23924488edc41a687baaf3e2495fc1c6487865e9944ef1b9422"
+    }
+  ],
   "finality": {
     "verified_at": "2026-08-15T16:04:45Z",
     "game_deployment": "FINALIZED",

@@ -16,6 +16,7 @@ import {
   Trophy,
   Zap,
 } from "lucide-react";
+import Link from "next/link";
 import { type CSSProperties, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   applyGenLayerResolutions,
@@ -58,7 +59,16 @@ const GUIDE_STEPS = new Set<GuideStep>(["pick", "choose", "fill", "review", "sta
 const LIVE_FIXTURE: FixtureLabel = { home: "Arsenal", away: "Coventry City", homeCode: "ARS", awayCode: "COV" };
 const QA_FIXTURE: FixtureLabel = { home: "Motagua", away: "Cartagines", homeCode: "MOT", awayCode: "CAR" };
 const DEMO_FIXTURE: FixtureLabel = { home: "Arsenal", away: "Chelsea", homeCode: "ARS", awayCode: "CHE" };
+const HULL_UNITED_FIXTURE: FixtureLabel = { home: "Hull City", away: "Manchester United", homeCode: "HUL", awayCode: "MUN" };
+const CITY_BOURNEMOUTH_FIXTURE: FixtureLabel = { home: "Manchester City", away: "AFC Bournemouth", homeCode: "MCI", awayCode: "BOU" };
+const NEWCASTLE_LIVERPOOL_FIXTURE: FixtureLabel = { home: "Newcastle United", away: "Liverpool", homeCode: "NEW", awayCode: "LIV" };
 const REGISTERED_FIXTURE: FixtureLabel = { home: "Registered home", away: "Registered away", homeCode: "HOME", awayCode: "AWAY" };
+const FEATURED_MATCHES = [
+  { roundId: "epl-2026-08-21-arsenal-coventry-bradbury-v3", fixture: LIVE_FIXTURE, kickoffAt: "2026-08-21T19:00:00Z" },
+  { roundId: "epl-2026-08-22-hull-man-united-bradbury-v3", fixture: HULL_UNITED_FIXTURE, kickoffAt: "2026-08-22T11:30:00Z" },
+  { roundId: "epl-2026-08-23-man-city-bournemouth-bradbury-v3", fixture: CITY_BOURNEMOUTH_FIXTURE, kickoffAt: "2026-08-23T14:00:00Z" },
+  { roundId: "epl-2026-08-23-newcastle-liverpool-bradbury-v3", fixture: NEWCASTLE_LIVERPOOL_FIXTURE, kickoffAt: "2026-08-23T15:30:00Z" },
+] as const;
 const FIXTURES_BY_ID: Record<string, FixtureLabel> = {
   "epl-2026-08-21-arsenal-coventry-bradbury-v3": LIVE_FIXTURE,
   "epl-2026-08-21-arsenal-coventry-studionet-v3": LIVE_FIXTURE,
@@ -68,6 +78,12 @@ const FIXTURES_BY_ID: Record<string, FixtureLabel> = {
   "qa-concacaf-motagua-cartagines-2026-08-13": QA_FIXTURE,
   "epl-2023-05-02-arsenal-chelsea-replay-v2": DEMO_FIXTURE,
   "epl-arsenal-chelsea-2023-05-02": DEMO_FIXTURE,
+  "epl-2026-08-22-hull-man-united-bradbury-v3": HULL_UNITED_FIXTURE,
+  "epl-hull-man-united-2026-08-22": HULL_UNITED_FIXTURE,
+  "epl-2026-08-23-man-city-bournemouth-bradbury-v3": CITY_BOURNEMOUTH_FIXTURE,
+  "epl-man-city-bournemouth-2026-08-23": CITY_BOURNEMOUTH_FIXTURE,
+  "epl-2026-08-23-newcastle-liverpool-bradbury-v3": NEWCASTLE_LIVERPOOL_FIXTURE,
+  "epl-newcastle-liverpool-2026-08-23": NEWCASTLE_LIVERPOOL_FIXTURE,
 };
 
 function fixtureForGame(game: OnchainGame): FixtureLabel {
@@ -103,9 +119,9 @@ function randomGrid(): PredictionId[] {
   });
 }
 
-function storeGuide(step: GuideStep, status: GuideStatus) {
+function storeGuide(storageKey: string, step: GuideStep, status: GuideStatus) {
   const value: StoredGuide = { version: 1, step, status };
-  window.localStorage.setItem(GUIDE_STORAGE_KEY, JSON.stringify(value));
+  window.localStorage.setItem(storageKey, JSON.stringify(value));
 }
 
 export function GameShell({ roundId }: { roundId?: string }) {
@@ -115,6 +131,7 @@ export function GameShell({ roundId }: { roundId?: string }) {
   const { snapshot, error: replayError, start: startMatch, reset: resetMatch } = useMatchSource();
   const genLayer = useGenLayerResolution();
   const onchainGame = useOnchainGame(roundId);
+  const guideStorageKey = `${GUIDE_STORAGE_KEY}:${onchainGame.config.roundId || "demo"}`;
   const fixture = fixtureForGame(onchainGame);
   const roundMinimumStake = onchainGame.round?.minimum_stake;
   const [stakeInput, setStakeInput] = useState(MINIMUM_STAKE_GEN);
@@ -164,11 +181,12 @@ export function GameShell({ roundId }: { roundId?: string }) {
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       setFeedbackEnabled(window.localStorage.getItem("moment-grid-feedback") !== "off");
-      const saved = window.localStorage.getItem(GUIDE_STORAGE_KEY);
+      const saved = window.localStorage.getItem(guideStorageKey)
+        ?? (!roundId ? window.localStorage.getItem(GUIDE_STORAGE_KEY) : null);
       if (!saved) {
         setGuideActive(true);
         setGuideStep("pick");
-        storeGuide("pick", "active");
+        storeGuide(guideStorageKey, "pick", "active");
         return;
       }
       try {
@@ -176,15 +194,16 @@ export function GameShell({ roundId }: { roundId?: string }) {
         if (parsed.version === 1 && parsed.step && GUIDE_STEPS.has(parsed.step) && parsed.status) {
           setGuideStep(parsed.step);
           setGuideActive(parsed.status === "active");
+          storeGuide(guideStorageKey, parsed.step, parsed.status);
         }
       } catch {
         setGuideActive(true);
         setGuideStep("pick");
-        storeGuide("pick", "active");
+        storeGuide(guideStorageKey, "pick", "active");
       }
     });
     return () => window.cancelAnimationFrame(frame);
-  }, []);
+  }, [guideStorageKey, roundId]);
 
   useEffect(() => () => { void audioContext.current?.close(); }, []);
 
@@ -238,8 +257,8 @@ export function GameShell({ roundId }: { roundId?: string }) {
   const updateGuide = useCallback((step: GuideStep, status: GuideStatus = "active") => {
     setGuideStep(step);
     setGuideActive(status === "active");
-    storeGuide(step, status);
-  }, []);
+    storeGuide(guideStorageKey, step, status);
+  }, [guideStorageKey]);
 
   const advanceGuide = useCallback((expected: GuideStep, next: GuideStep) => {
     if (!guideActive || guideStep !== expected) return;
@@ -433,6 +452,7 @@ function BuildScreen({ grid, complete, onPick, onQuickFill, onContinue, onchainG
         {!committed && <button className="text-button" data-guide="random-fill" onClick={onQuickFill}><Zap size={13} /> Random fill</button>}
       </div>
       <p className="lede">Build nine football predictions. Every square is its own loser-funded pari-mutuel pool; rows control stake weight and columns control timing.</p>
+      {onchainGame.configured && <MatchSwitcher selectedRoundId={onchainGame.config.roundId} />}
       <MatchCard game={onchainGame} />
       <ResolutionLoop compact />
       <GridBoard grid={grid} onPick={committed ? undefined : onPick} pools={onchainGame.pools} />
@@ -442,6 +462,32 @@ function BuildScreen({ grid, complete, onPick, onQuickFill, onContinue, onchainG
         {committed ? "Open my committed grid" : complete ? "Review my grid" : `${grid.filter(Boolean).length} / 9 predictions picked`}<ChevronRight size={18} />
       </button>
     </div>
+  );
+}
+
+function MatchSwitcher({ selectedRoundId }: { selectedRoundId: string }) {
+  return (
+    <section className="match-switcher" aria-label="Choose a match">
+      <div><strong>Choose a match</strong><span>Each has nine separate pools.</span></div>
+      <div className="match-switcher-options">
+        {FEATURED_MATCHES.map(({ roundId, fixture, kickoffAt }) => {
+          const selected = roundId === selectedRoundId;
+          return (
+            <Link
+              aria-current={selected ? "page" : undefined}
+              className={selected ? "is-selected" : ""}
+              href={`/?round=${encodeURIComponent(roundId)}`}
+              key={roundId}
+              scroll={false}
+            >
+              <b>{fixture.homeCode}–{fixture.awayCode}</b>
+              <small>{new Date(kickoffAt).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</small>
+            </Link>
+          );
+        })}
+      </div>
+      <small>Each match keeps its own grid and first-time walkthrough.</small>
+    </section>
   );
 }
 
