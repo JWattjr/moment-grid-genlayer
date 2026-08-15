@@ -1,71 +1,61 @@
-# Moment Grid reviewer demo script (90 seconds)
+# Moment Grid — simple demonstration
 
-Record at 1080p with a fresh browser profile or disconnected wallet. Keep addresses and transaction hashes readable. Do not show private keys, seed phrases, keystore prompts, local fixture controls, or the controlled test bot as an organic player.
+Keep the video between 60 and 75 seconds. Speak naturally and show only the
+pages mentioned below. Do not show passwords, private keys, or wallet recovery
+words.
 
-## 0–12 seconds — Product and trust problem
+## 1. Show the game
 
 Open `https://moment-grid-genlayer.vercel.app`.
 
-Say: “Moment Grid is football bingo with real on-chain pools. Players lock nine granular match calls before kickoff. Those calls cannot be settled safely by one frontend or a final-score feed.”
+Say:
 
-Show the Arsenal–Coventry match card, Bradbury V3 label, and the Pick → Lock → Resolve → Score rail.
+> “Moment Grid is a football prediction game on GenLayer. You choose nine
+> events that you think will happen during a match.”
 
-## 12–28 seconds — Grid and native GEN stake
+Show the Arsenal–Coventry match and the 3×3 grid.
 
-Fill the grid, open Review, and change the stake input.
+## 2. Show the stake
 
-Say: “One payable transaction stores the packed grid. From a 1 test GEN minimum, each of the nine squares receives its own independent loser-funded pool; rarity controls only how much goes into that cell. Validator acceptance appears immediately, while irreversible Bradbury finality continues in the background.”
+Press **Random fill**, then **Review my grid**.
 
-Show the exact allocation and confirmation card. Stop before signing unless a fresh test entry has been planned.
+Say:
 
-## 28–43 seconds — Contract state, not a replay claim
+> “You can play from 1 test GEN. Every square has its own prize pool. Players
+> who choose correctly share the money in that square.”
 
-Open `/rounds`.
+Show the 1 GEN stake and its simple breakdown. Do not sign a transaction while
+recording unless you already planned to make a new test entry.
 
-Say: “Rounds, liquidity, unique grids, lock times, and jackpot balances are read from the Bradbury game contract. Form Bot and Chaos Bot are fixed, disclosed, and excluded from human standings. Underfilled rounds void.”
+## 3. Show the live round
 
-Show the active future round and both disclosed bot labels. Do not call the bots organic users.
+Open `https://moment-grid-genlayer.vercel.app/rounds`.
 
-## 43–59 seconds — Why GenLayer is central
+Say:
 
-Open `/genlayer` and choose the settled TRUE first-goal record.
+> “This round is live on the Bradbury testnet. The two bots are clearly
+> labelled test opponents, so a new player has someone to play against.”
 
-Say: “GenLayer validators independently read registered BBC and ESPN reports and agree on constrained decision fields. The caller cannot provide the answer. Missing or conflicting evidence stays retryable instead of becoming FALSE.”
+Show the open round, two entries, and jackpot.
 
-Show `Settled TRUE`, the criterion, evidence summary, sources, and technical details.
+## 4. Show why GenLayer matters
 
-## 59–72 seconds — Negative proof and deterministic scoring
+Open `https://moment-grid-genlayer.vercel.app/genlayer`.
 
-Choose the settled FALSE penalty-window record.
+Say:
 
-Say: “The same contract also proves a negative result. The Intelligent Contract interprets evidence; deterministic code maps the accepted fact into the grid. The model never calculates lines or rewards.”
+> “After a match, GenLayer validators check trusted public match reports and
+> agree on what happened. The game uses that result to score everyone fairly.
+> If an event cannot be confirmed, that part of the stake is refunded.”
 
-Show `Settled FALSE`, `NO_PENALTY_IN_WINDOW`, and Moment Grid impact.
+Show one completed result and its public sources.
 
-## 72–84 seconds — Money-path safety
+## 5. Finish
 
-Open `/integrity`.
+Return to the home page.
 
-Say: “The resolver stores validator consensus first. A second permissionless transaction dispatches truth and evidence coverage to the game. Unsupported calls refund their affected cell stake. Failed liquidity, unresolved evidence, or stalled scoring opens full refunds.”
+Say:
 
-Show the immutable entry, independent validator, recovery, source, and proof cards.
+> “Moment Grid is live, playable, and fully connected to GenLayer.”
 
-## 84–90 seconds — Close
-
-Return to `/rounds` or the home screen.
-
-Say: “Moment Grid turns public football evidence into a complete on-chain game loop: pick, stake, resolve, score, claim—or recover safely.”
-
-End on the live URL and GitHub repository URL.
-
-## Recording acceptance checklist
-
-- The browser address bar shows the public Vercel domain.
-- Bradbury V3 and test GEN are stated clearly.
-- At least one live contract-read round is visible.
-- Both a settled TRUE and settled FALSE resolver record appear.
-- Controlled test accounts are disclosed.
-- No local mock or fixture is presented as live evidence.
-- No secret or account unlock prompt appears.
-- Captions or clear narration fit within 90–105 seconds.
-- The final link is public without sign-in before adding it to Portal evidence.
+End with the live game URL on screen.

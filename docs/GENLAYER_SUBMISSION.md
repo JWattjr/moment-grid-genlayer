@@ -7,37 +7,31 @@ This is the ready-to-paste package for the Portal **Builder → Projects → Pro
 ### Title
 
 ```text
-Moment Grid — GenLayer-Settled Football Prediction Game
+Moment Grid — Football Prediction Game on GenLayer
 ```
 
 ### Notes / Description
 
-The following copy is **888 characters**, below the Portal's 1,000-character limit.
+The following copy is written in plain English and stays below the Portal's 1,000-character limit.
 
 ```text
-Moment Grid is a fully playable 3×3 football prediction game on GenLayer Bradbury. Players sign one payable transaction to lock nine match calls from a 1 test GEN minimum. Every square is a separate loser-funded pari-mutuel pool; rows set only allocation weight. The app shows validator-accepted entries immediately and tracks Bradbury finality in the background. After full time, a permissionless Intelligent Contract asks validators to read immutable BBC/TheSportsDB evidence and agree on truth plus coverage bitmaps. Consensus is stored first, then separately dispatched to the game. Deterministic on-chain code scores grids, refunds unsupported calls, distributes each cell independently, and opens jackpot claims or full recovery. Resolution dispatch, settlement, and claims stay finality-gated. V3 is live with two disclosed fixed-grid bots, 49 direct tests, and finalized receipts.
+Moment Grid is a 3×3 football prediction game running on GenLayer Bradbury. Players choose nine events they think will happen during a football match and stake from 1 test GEN. Each square has its own prize pool, and players with the correct pick share that pool. After the match, GenLayer validators check public reports from BBC and TheSportsDB and agree on what happened. The game then scores every grid, pays winners, refunds any square that cannot be verified, and allows full refunds if a round cannot be completed. Completing a correct row and diagonal also wins a share of the jackpot. The live app supports wallet entry, results, claims, and round history. Two clearly labelled bots provide testnet opponents. The code, tests, live app, and deployment records are public.
 ```
 
 Keep this copy below the Portal's 1,000-character limit when editing.
 
 ## Evidence URLs
 
-Add these as separate evidence items in this order:
+Add only these three evidence items:
 
 1. Required GitHub Repository
    `https://github.com/JWattjr/moment-grid-genlayer`
-2. Live application
+2. Live game
    `https://moment-grid-genlayer.vercel.app`
-3. Live GenLayer proof
+3. Live GenLayer result
    `https://moment-grid-genlayer.vercel.app/genlayer`
-4. Bradbury V3 deployment manifest
-   `https://github.com/JWattjr/moment-grid-genlayer/blob/main/deployments/genlayer/bradbury-v3.json`
-5. Architecture and payout specification
-   `https://github.com/JWattjr/moment-grid-genlayer/blob/main/docs/ONCHAIN_GAME.md`
-6. Optional recording, after it exists
-   Paste the public unlisted YouTube or Loom URL produced from `docs/DEMO_SCRIPT.md`.
 
-Do not add localhost links, private Vercel deployment URLs, fixture-only screenshots, or a video URL that reviewers cannot open without signing in.
+The repository already contains the contracts, tests, deployment records, and detailed documentation. A short public video can be added later, but it is optional.
 
 For a minimal field-by-field paste sheet, use [`SUBMIT_NOW.md`](SUBMIT_NOW.md).
 
