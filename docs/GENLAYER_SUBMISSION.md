@@ -79,7 +79,7 @@ Do not add localhost links, private Vercel deployment URLs, fixture-only screens
 - [x] Direct Mode suite passes 49/49 tests, including an exact nine-independent-pool payout case.
 - [x] The Bradbury V2 callback-order discrepancy is documented and removed in V3 through separate resolve and dispatch transactions.
 - [ ] Optional 90-second public recording is uploaded and its URL is added as evidence.
-- [ ] Final Bradbury production build is deployed and visually rechecked after the acceptance-first UI commit.
+- [x] Final Bradbury production build is deployed and visually rechecked after the acceptance-first UI commit.
 
 The video is optional but likely improves review speed and highlight potential. Do not spend a Portal Project slot until the production deployment and evidence links are rechecked while signed out.
 

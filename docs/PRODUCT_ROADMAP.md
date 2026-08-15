@@ -42,7 +42,7 @@ rolling jackpot.
 - [x] Implement acceptance-first Bradbury entries with explicit provisional UI
   and background finality tracking; keep settlement and claims finality-gated.
 - [ ] Record Bradbury finality for both V3 deployments after the appeal window.
-- [ ] Update Vercel environment variables and visually verify the public game,
+- [x] Update Vercel environment variables and visually verify the public game,
   rounds, entries, consensus proof, integrity, and responsible-play routes.
 - [ ] Publish a 90-second reviewer recording after the Bradbury V3 release is live.
 
