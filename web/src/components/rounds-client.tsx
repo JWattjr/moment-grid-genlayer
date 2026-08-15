@@ -17,7 +17,7 @@ export function RoundsClient() {
     }))).then(setRounds).catch((caught) => setError(caught instanceof Error ? caught.message : "Unable to load rounds."));
   }, []);
 
-  if (!genLayerGameConfig.enabled) return <div className="prototype-note">The active StudioNet contracts are not configured yet.</div>;
+  if (!genLayerGameConfig.enabled) return <div className="prototype-note">The active GenLayer game contracts are not configured yet.</div>;
   return (
     <section className="round-list" aria-live="polite">
       {error && <p className="error-message">{error}</p>}

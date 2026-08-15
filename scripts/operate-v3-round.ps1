@@ -13,12 +13,19 @@ if ($LASTEXITCODE -ne 0) { throw "Unable to select $Network." }
 & genlayer account use $AccountName
 if ($LASTEXITCODE -ne 0) { throw "Unable to select $AccountName." }
 
+$contractAddress = $GameAddress
+$methodArgs = @($RoundId)
 switch ($Mode) {
-    "Resolve"  { & genlayer write $ResolverAddress resolve_round --args $RoundId }
-    "Dispatch" { & genlayer write $ResolverAddress dispatch_resolution --args $RoundId }
-    "Process"  { & genlayer write $GameAddress process_settlement --args $RoundId 100 }
-    "Refund"   { & genlayer write $GameAddress activate_refunds --args $RoundId }
-    "Claim"    { & genlayer write $GameAddress claim --args $RoundId }
+    "Resolve"  { $contractAddress = $ResolverAddress; $method = "resolve_round" }
+    "Dispatch" { $contractAddress = $ResolverAddress; $method = "dispatch_resolution" }
+    "Process"  { $method = "process_settlement"; $methodArgs = @($RoundId, 100) }
+    "Refund"   { $method = "activate_refunds" }
+    "Claim"    { $method = "claim" }
 }
-if ($LASTEXITCODE -ne 0) { throw "$Mode transaction failed." }
-Write-Host "$Mode submitted. Inspect execution success and then read both resolver and game state."
+$output = & genlayer write $contractAddress $method --args @methodArgs 2>&1
+$exitCode = $LASTEXITCODE
+$output | ForEach-Object { Write-Host $_ }
+if ($exitCode -ne 0 -or ($output -join "`n") -notmatch "txExecutionResultName:\s*'FINISHED_WITH_RETURN'") {
+    throw "$Mode did not produce a successful execution receipt."
+}
+Write-Host "$Mode accepted with successful execution. Wait for required finality, then read both resolver and game state before the next lifecycle action."

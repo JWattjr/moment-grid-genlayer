@@ -6,9 +6,6 @@ import { ExecutionResult, TransactionStatus } from "genlayer-js/types";
 import { pathToFileURL } from "node:url";
 import { decideKeeperAction, KeeperAction } from "./keeper-policy.mjs";
 
-const DEFAULT_GAME = "0x1D87C32c1A0D65C083ce322608D284E5767b8408";
-const DEFAULT_RESOLVER = "0x0aeBC87aBa11CA67945A73BcbC66AEEAA0D828FB";
-const DEFAULT_ROUND = "epl-2026-08-21-arsenal-coventry-v2";
 const ONE_GEN = 1_000_000_000_000_000_000n;
 
 // Both grids are fixed, public, and committed before human play. These bots
@@ -44,10 +41,9 @@ function json(value) {
 
 function config() {
   const network = process.env.GENLAYER_NETWORK ?? process.env.NEXT_PUBLIC_GENLAYER_GAME_NETWORK ?? "studionet";
-  const legacyDefaults = network === "testnet-bradbury";
-  const gameAddress = process.env.GENLAYER_GAME_ADDRESS ?? process.env.NEXT_PUBLIC_GENLAYER_GAME_ADDRESS ?? (legacyDefaults ? DEFAULT_GAME : "");
-  const resolverAddress = process.env.GENLAYER_ROUND_RESOLVER_ADDRESS ?? process.env.NEXT_PUBLIC_GENLAYER_ROUND_RESOLVER_ADDRESS ?? (legacyDefaults ? DEFAULT_RESOLVER : "");
-  const roundId = process.env.GENLAYER_GAME_ROUND_ID ?? process.env.NEXT_PUBLIC_GENLAYER_GAME_ROUND_ID ?? (legacyDefaults ? DEFAULT_ROUND : "");
+  const gameAddress = process.env.GENLAYER_GAME_ADDRESS ?? process.env.NEXT_PUBLIC_GENLAYER_GAME_ADDRESS ?? "";
+  const resolverAddress = process.env.GENLAYER_ROUND_RESOLVER_ADDRESS ?? process.env.NEXT_PUBLIC_GENLAYER_ROUND_RESOLVER_ADDRESS ?? "";
+  const roundId = process.env.GENLAYER_GAME_ROUND_ID ?? process.env.NEXT_PUBLIC_GENLAYER_GAME_ROUND_ID ?? "";
   if (!/^0x[0-9a-fA-F]{40}$/.test(gameAddress) || !/^0x[0-9a-fA-F]{40}$/.test(resolverAddress) || !roundId) {
     throw new Error("GENLAYER_GAME_ADDRESS, GENLAYER_ROUND_RESOLVER_ADDRESS, and GENLAYER_GAME_ROUND_ID are required.");
   }

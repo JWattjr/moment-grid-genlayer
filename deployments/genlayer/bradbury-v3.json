@@ -1,0 +1,101 @@
+{
+  "network": "testnet-bradbury",
+  "chain_id": 4221,
+  "rpc": "https://rpc-bradbury.genlayer.com",
+  "owner_address": "0xdb433ff614bdd1ece21aa97221c3e0a7ecf79c92",
+  "version": "3.0.0",
+  "game": {
+    "contract": "MomentGridGame",
+    "contract_address": "0x4bff4e5b50E21D25988D8029A7535E8111Eb62eF",
+    "deployment_transaction": "0x468be683e392eed34688e89d9c640f2ad4bc3a3aa0b2637267be9429f4ad8d7d",
+    "status_at_release": "ACCEPTED_PENDING_FINALITY",
+    "validator_result": "AGREE",
+    "execution": "FINISHED_WITH_RETURN",
+    "version_verified": true,
+    "schema_verified": true
+  },
+  "round_resolver": {
+    "contract": "MatchRoundResolver",
+    "contract_address": "0x901327a3D6D1d91baa57542bd27eAf336bC604d7",
+    "deployment_transaction": "0xfc7ef50dfaed66ac91cb6f9685ac3e45809cdc7c07c06aac3800d3380b827edb",
+    "status_at_release": "ACCEPTED_PENDING_FINALITY",
+    "validator_result": "AGREE",
+    "execution": "FINISHED_WITH_RETURN",
+    "version_verified": true,
+    "schema_verified": true
+  },
+  "active_round_id": "epl-2026-08-21-arsenal-coventry-bradbury-v3",
+  "round": {
+    "match_id": "epl-arsenal-coventry-2026-08-21",
+    "home_team": "Arsenal",
+    "away_team": "Coventry City",
+    "competition": "English Premier League",
+    "match_date": "2026-08-21",
+    "source_urls": [
+      "https://www.bbc.co.uk/sport/football/scores-fixtures/2026-08-21",
+      "https://www.thesportsdb.com/event/2494000-arsenal-vs-coventry-city"
+    ],
+    "lock_at": "2026-08-21T18:45:00Z",
+    "kickoff_at": "2026-08-21T19:00:00Z",
+    "resolve_not_before": "2026-08-21T21:30:00Z",
+    "refund_at": "2026-08-25T19:00:00Z",
+    "minimum_stake_wei": "1000000000000000000",
+    "minimum_participants": 2,
+    "minimum_total_stake_wei": "2000000000000000000",
+    "minimum_unique_grids": 2,
+    "status": "OPEN",
+    "resolver_status": "PENDING",
+    "participant_count": 2,
+    "unique_grid_count": 2,
+    "liquidity_ready": true,
+    "total_escrow_wei": "2000000000000000000",
+    "total_pool_stake_wei": "1800000000000000000",
+    "jackpot_pool_wei": "100000000000000000",
+    "revenue_pool_wei": "100000000000000000",
+    "resolver_registration_transaction": "0x3b8cdbf11a7243bbbaa8d3673df7ff603ab5b05c4c558a1c9802b84caca17278",
+    "game_round_creation_transaction": "0x4d4a8f5722680a5d79a34e339d7c12ed2e81773f45b2a71e2766cdd9c3a0472a",
+    "failed_registration_transaction": {
+      "transaction": "0x958439e1cf7a0c6d9c68cc0df085657990481a3c344fb23a550fcd8637211981",
+      "execution": "FINISHED_WITH_ERROR",
+      "state_applied": false,
+      "reason": "The CLI path double-encoded the JSON evidence argument on Bradbury; the typed GenLayerJS retry used CalldataAddress and the canonical JSON string."
+    },
+    "bots": {
+      "form": {
+        "label": "Form Bot",
+        "address": "0xdb433ff614bdd1ece21aa97221c3e0a7ecf79c92",
+        "entry_transaction": "0x885b35741fd56b0b8311ef4930056eeadf4077ae1cacfb96e586c286932b535b",
+        "transaction_status": "ACCEPTED_PENDING_FINALITY",
+        "execution": "FINISHED_WITH_RETURN",
+        "stake_wei": "1000000000000000000",
+        "moment_ids": [1, 4, 7, 10, 13, 16, 19, 22, 25],
+        "packed_grid": "462759234584319558657"
+      },
+      "chaos": {
+        "label": "Chaos Bot",
+        "address": "0x2c8eb5db1105a85be66badafed88d10cf393cdd8",
+        "entry_transaction": "0x13735e6e959afafddcef268456f91d0386cd8ee719481659720399f0a9cbf29f",
+        "transaction_status": "ACCEPTED_PENDING_FINALITY",
+        "execution": "FINISHED_WITH_RETURN",
+        "stake_wei": "1000000000000000000",
+        "moment_ids": [3, 6, 9, 12, 15, 18, 21, 24, 27],
+        "packed_grid": "499797403077414815235"
+      }
+    },
+    "nine_pool_state": {
+      "common_cell_totals_wei": ["100000000000000000", "100000000000000000", "100000000000000000"],
+      "medium_cell_totals_wei": ["200000000000000000", "200000000000000000", "200000000000000000"],
+      "rare_cell_totals_wei": ["300000000000000000", "300000000000000000", "300000000000000000"],
+      "verified": true
+    },
+    "accepted_state_verified_at": "2026-08-15T13:25:00Z"
+  },
+  "ux_policy": {
+    "player_entry_completion": "ACCEPTED",
+    "provisional_copy_required": true,
+    "background_finality_tracking": true,
+    "resolution_dispatch_settlement_and_claims_require": "FINALIZED",
+    "leader_only_enabled": false
+  },
+  "legacy_recovery_manifest": "deployments/genlayer/bradbury.json"
+}

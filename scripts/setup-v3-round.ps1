@@ -29,9 +29,24 @@ if (-not ($times[0] -lt $times[1] -and $times[1] -le $times[2] -and $times[2] -l
 }
 $sources = $SourceUrlsJson | ConvertFrom-Json
 if ($sources.Count -lt 2) { throw "At least two evidence URLs are required." }
-$sourceStringArg = $SourceUrlsJson | ConvertTo-Json -Compress
+$sourceStringArg = $SourceUrlsJson
 $gameAddressArg = "addr#$($GameAddress.Substring(2))"
 $resolverAddressArg = "addr#$($ResolverAddress.Substring(2))"
+
+function Invoke-CheckedWrite {
+    param(
+        [string]$ContractAddress,
+        [string]$Method,
+        [object[]]$MethodArgs
+    )
+    $output = & genlayer write $ContractAddress $Method --args @MethodArgs 2>&1
+    $exitCode = $LASTEXITCODE
+    $output | ForEach-Object { Write-Host $_ }
+    $receipt = $output -join "`n"
+    if ($exitCode -ne 0 -or $receipt -notmatch "txExecutionResultName:\s*'FINISHED_WITH_RETURN'") {
+        throw "$Method did not produce a successful execution receipt."
+    }
+}
 
 & genlayer network set $Network
 if ($LASTEXITCODE -ne 0) { throw "Unable to select $Network." }
@@ -39,11 +54,16 @@ if ($LASTEXITCODE -ne 0) { throw "Unable to select $Network." }
 if ($LASTEXITCODE -ne 0) { throw "Unable to select $AccountName." }
 
 Write-Host "Registering immutable resolver evidence inputs..."
-& genlayer write $ResolverAddress register_round --args $RoundId $MatchId $HomeTeam $AwayTeam $Competition $MatchDate $sourceStringArg $gameAddressArg $RoundId $ResolveNotBefore $RefundAt
-if ($LASTEXITCODE -ne 0) { throw "Resolver registration failed." }
+Invoke-CheckedWrite -ContractAddress $ResolverAddress -Method "register_round" -MethodArgs @(
+    $RoundId, $MatchId, $HomeTeam, $AwayTeam, $Competition, $MatchDate,
+    $sourceStringArg, $gameAddressArg, $RoundId, $ResolveNotBefore, $RefundAt
+)
 
 Write-Host "Creating the matching V3 game round with an immutable per-round stake floor..."
-& genlayer write $GameAddress create_round --args $RoundId $MatchId $resolverAddressArg $RoundId $LockAt $KickoffAt $ResolveNotBefore $RefundAt $MinimumStakeWei $MinimumParticipants $MinimumTotalStakeWei $MinimumUniqueGrids
-if ($LASTEXITCODE -ne 0) { throw "Game round creation failed." }
+Invoke-CheckedWrite -ContractAddress $GameAddress -Method "create_round" -MethodArgs @(
+    $RoundId, $MatchId, $resolverAddressArg, $RoundId, $LockAt, $KickoffAt,
+    $ResolveNotBefore, $RefundAt, $MinimumStakeWei, $MinimumParticipants,
+    $MinimumTotalStakeWei, $MinimumUniqueGrids
+)
 
 Write-Host "Round submitted. Verify both execution receipts and read both contract records before accepting entries."

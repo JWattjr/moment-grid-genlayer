@@ -2,7 +2,7 @@
 
 **A 3×3 football prediction game with native-GEN pools settled from public match evidence by GenLayer validator consensus.**
 
-[Play the StudioNet game](https://moment-grid-genlayer.vercel.app) · [Inspect live consensus proof](https://moment-grid-genlayer.vercel.app/genlayer) · [Review deployment receipts](deployments/genlayer/studionet.json)
+[Play the Bradbury game](https://moment-grid-genlayer.vercel.app) · [Inspect live consensus proof](https://moment-grid-genlayer.vercel.app/genlayer) · [Review deployment receipts](deployments/genlayer/bradbury-v3.json)
 
 ## Reviewer quick path
 
@@ -10,9 +10,9 @@
 2. Review the stake split before signing. The minimum 1 GEN entry allocates 0.05 GEN to each Common cell, 0.10 to each Medium cell, 0.15 to each Rare cell, 0.05 to the jackpot, and 0.05 to pending protocol revenue.
 3. Open [Rounds](https://moment-grid-genlayer.vercel.app/rounds) to inspect contract-read liquidity, entries, and clearly disclosed controlled test accounts.
 4. Open [Live proof](https://moment-grid-genlayer.vercel.app/genlayer) to inspect settled TRUE and FALSE results produced from BBC and ESPN evidence by the reusable Studionet resolver.
-5. Review [Integrity](https://moment-grid-genlayer.vercel.app/integrity), the [StudioNet deployment manifest](deployments/genlayer/studionet.json), and the [full game specification](docs/ONCHAIN_GAME.md).
+5. Review [Integrity](https://moment-grid-genlayer.vercel.app/integrity), the [Bradbury V3 deployment manifest](deployments/genlayer/bradbury-v3.json), and the [full game specification](docs/ONCHAIN_GAME.md).
 
-No wallet is required to inspect rounds, contract state, consensus records, rules, or the trust model. A compatible wallet is required only to sign an entry or permissionless lifecycle action on StudioNet.
+No wallet is required to inspect rounds, contract state, consensus records, rules, or the trust model. A compatible wallet is required only to sign an entry or permissionless lifecycle action on Bradbury.
 
 ## The trust problem
 
@@ -23,7 +23,7 @@ Moment Grid registers the match and evidence policy before play. GenLayer valida
 ## End-to-end on-chain lifecycle
 
 ```text
-Player signs one payable packed grid on StudioNet
+Player signs one payable packed grid on Bradbury
                          ↓
 MomentGridGame escrows GEN across nine pools + jackpot
                          ↓
@@ -52,23 +52,25 @@ Detailed accounting and failure behavior are in [docs/ONCHAIN_GAME.md](docs/ONCH
 
 ## Live deployments
 
-### StudioNet V3 — active playable round
+### Bradbury V3 — active playable round
 
 | Item | Value |
 | --- | --- |
-| Network | StudioNet · chain 61999 |
-| Game | `0x9f95bDD3E4a2479b8f628599cc672E7a519C0920` |
-| Full-match resolver | `0xDa0569bE8c8d148D3F2f6Fba5aC00a39bFc64590` |
+| Network | Bradbury testnet · chain 4221 |
+| Game | `0x4bff4e5b50E21D25988D8029A7535E8111Eb62eF` |
+| Full-match resolver | `0x901327a3D6D1d91baa57542bd27eAf336bC604d7` |
 | Contract version | `3.0.0` on both deployments |
-| Public round | `epl-2026-08-21-arsenal-coventry-studionet-v3` |
+| Public round | `epl-2026-08-21-arsenal-coventry-bradbury-v3` |
 | Public round state | OPEN · 2 disclosed bots · 2 unique grids · 2 test GEN escrow · liquidity gate met |
 | Minimum entry | 1 test GEN |
 
-Form Bot and Chaos Bot each committed a distinct public fixed grid and exactly 1 test GEN before human play. They provide disclosed baseline liquidity, are never described as organic users, and are excluded from the human leaderboard. Every one of the nine cells keeps an independent pool and option ledger. Exact inputs, receipts, and state are recorded in [deployments/genlayer/studionet.json](deployments/genlayer/studionet.json).
+Form Bot and Chaos Bot each committed a distinct public fixed grid and exactly 1 test GEN before human play. They provide disclosed baseline liquidity, are never described as organic users, and are excluded from the human leaderboard. Every one of the nine cells keeps an independent pool and option ledger. Exact inputs, accepted receipts, and state are recorded in [deployments/genlayer/bradbury-v3.json](deployments/genlayer/bradbury-v3.json).
+
+Player entries use an acceptance-first Bradbury experience: successful validator `ACCEPTED` state immediately reveals the immutable entry and pool position while the UI tracks the longer appeal/finality window in the background. Resolution dispatch, settlement, and claims still require finalized predecessor state.
 
 ### Preserved Bradbury V2
 
-The prior Bradbury V2 contracts and positions remain recorded in [deployments/genlayer/bradbury.json](deployments/genlayer/bradbury.json), and the Integrity page links to the preserved V2 release for recovery. New public play has moved to StudioNet V3. The earlier QA round exposed a callback-order failure: the game reached settlement while the resolver record remained pending. V3 removes automatic callback dispatch, so consensus must persist first and a separate permissionless transaction sends it to the game.
+The prior Bradbury V2 contracts and positions remain recorded in [deployments/genlayer/bradbury.json](deployments/genlayer/bradbury.json), and the Integrity page links to the preserved V2 release for recovery. New public play uses fresh Bradbury V3 contracts. The earlier QA round exposed a callback-order failure: the game reached settlement while the resolver record remained pending. V3 removes automatic callback dispatch, so consensus must persist first and a separate permissionless transaction sends it to the game.
 
 ### Reusable Studionet resolver proof
 
@@ -81,7 +83,7 @@ The prior Bradbury V2 contracts and positions remain recorded in [deployments/ge
 | Consensus | `MAJORITY_AGREE` · successful execution |
 | Evidence | BBC Sport + ESPN |
 
-[`MatchMomentResolver`](contracts/match_moment_resolver.py) is a reusable, application-neutral contract for one constrained football criterion. Its settled records give reviewers an immediately inspectable consensus proof while the active StudioNet fixture remains open.
+[`MatchMomentResolver`](contracts/match_moment_resolver.py) is a reusable, application-neutral contract for one constrained football criterion. Its settled StudioNet records give reviewers an immediately inspectable consensus proof while the active Bradbury fixture remains open.
 
 ## Repository map
 
@@ -109,7 +111,7 @@ pnpm --filter @moment-grid/scoring build
 pnpm --filter web dev
 ```
 
-Open `http://localhost:3003`. The checked-in environment example points at the public StudioNet V3 game and reusable resolver proof. Never add a private key, account password, or provider secret to an environment file.
+Open `http://localhost:3003`. The checked-in environment example points at the public Bradbury V3 game and the reusable StudioNet resolver proof. Never add a private key, account password, or provider secret to an environment file.
 
 ## Verification
 
@@ -146,7 +148,8 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/GENLAYER_SOURCE_POLICY.m
 
 - [Ready-to-paste Project contribution](docs/GENLAYER_SUBMISSION.md)
 - [Reviewer demo recording script](docs/DEMO_SCRIPT.md)
-- [StudioNet V3 operation](docs/STUDIONET_RUNBOOK.md)
+- [Bradbury V3 operation](docs/BRADBURY_V3_RUNBOOK.md)
+- [StudioNet V3 pre-production operation](docs/STUDIONET_RUNBOOK.md)
 - [Preserved Bradbury V2 operation and payout rehearsal](docs/BRADBURY_GAME_RUNBOOK.md)
 - [Studionet reusable resolver runbook](docs/STUDIONET_RUNBOOK.md)
 

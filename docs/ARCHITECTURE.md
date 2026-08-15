@@ -11,7 +11,7 @@ Player builds a 3×3 grid and reviews the stake split
 Next.js + wallet sign one payable packed-grid transaction
                          |
                          v
-MomentGridGame V3 on StudioNet
+MomentGridGame V3 on Bradbury
         |                                    |
         | escrow + nine pools                | registered callback only
         v                                    v
@@ -50,7 +50,7 @@ The separate `MatchMomentResolver` deployment on StudioNet provides an immediate
 
 ### Web application
 
-The Next.js app owns grid construction, readable stake allocation, wallet and wrong-network recovery, finalized transaction progress, round discovery, entry recovery, claim actions, leaderboard views, integrity disclosures, and the live reviewer route. It reads packed grids, marks, pool state, and claimable balances from contracts. The replay is presentation only.
+The Next.js app owns grid construction, readable stake allocation, wallet and wrong-network recovery, accepted/finalized transaction progress, round discovery, entry recovery, claim actions, leaderboard views, integrity disclosures, and the live reviewer route. It reads packed grids, marks, pool state, and claimable balances from contracts. The replay is presentation only.
 
 ### Shared scoring package
 
@@ -80,7 +80,7 @@ The NestJS service is an optional replay/live-feed adapter. It stores normalized
 - Missing evidence is never silently converted to FALSE.
 - The resolver callback is authenticated; owner and frontend cannot inject bitmaps.
 - Round liquidity and unique-grid floors prevent the one-player guaranteed-loss case. Two disclosed fixed-grid bots satisfy the baseline gate without being counted as organic users or human leaderboard entries.
-- Accepted lifecycle status alone is not treated as execution success; writes wait for finalization and verify `FINISHED_WITH_RETURN`.
+- Accepted lifecycle status alone is not treated as execution success. Player entries verify `FINISHED_WITH_RETURN`, expose accepted state as provisional, and track finality in the background. Lifecycle operations retain finalized predecessor gates.
 - The replay and local previews never produce claimable balances.
 - Pause blocks new exposure but cannot block settlement, claims, refunds, or withdrawals.
 - Owner transfer is two-step. Disclosed player bots and historical QA activity are publicly labeled.

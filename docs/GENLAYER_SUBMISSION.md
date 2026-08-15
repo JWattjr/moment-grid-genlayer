@@ -15,7 +15,7 @@ Moment Grid — GenLayer-Settled Football Prediction Game
 The following copy is below the Portal's 1,000-character limit.
 
 ```text
-Moment Grid is a fully playable 3×3 football prediction game on GenLayer StudioNet. Players sign one payable transaction to lock nine match calls from a 1 test GEN minimum. Every square is a separate loser-funded pari-mutuel pool; Common, Medium, and Rare rows set only the allocation weight. After full time, a permissionless Intelligent Contract asks validators to read immutable BBC/TheSportsDB evidence and agree on truth plus coverage bitmaps. Consensus is stored first, then separately dispatched to the game. Deterministic on-chain code scores grids, refunds unsupported calls, distributes each cell independently, and opens jackpot claims or full recovery. The Next.js app handles wallet signing, finalized transaction state, rounds, entries, claims, standings, integrity, and safer-play disclosures. V3 is live with two clearly labeled fixed-grid bots, 49 direct tests, and public deployment receipts.
+Moment Grid is a fully playable 3×3 football prediction game on GenLayer Bradbury. Players sign one payable transaction to lock nine match calls from a 1 test GEN minimum. Every square is a separate loser-funded pari-mutuel pool; rows set only allocation weight. The app shows validator-accepted entries immediately and tracks Bradbury finality in the background. After full time, a permissionless Intelligent Contract asks validators to read immutable BBC/TheSportsDB evidence and agree on truth plus coverage bitmaps. Consensus is stored first, then separately dispatched to the game. Deterministic on-chain code scores grids, refunds unsupported calls, distributes each cell independently, and opens jackpot claims or full recovery. Resolution dispatch, settlement, and claims stay finality-gated. V3 is live with two disclosed fixed-grid bots, 49 direct tests, and public receipts.
 ```
 
 Keep this copy below the Portal's 1,000-character limit when editing.
@@ -30,8 +30,8 @@ Add these as separate evidence items in this order:
    `https://moment-grid-genlayer.vercel.app`
 3. Live GenLayer proof
    `https://moment-grid-genlayer.vercel.app/genlayer`
-4. StudioNet V3 deployment manifest
-   `https://github.com/JWattjr/moment-grid-genlayer/blob/main/deployments/genlayer/studionet.json`
+4. Bradbury V3 deployment manifest
+   `https://github.com/JWattjr/moment-grid-genlayer/blob/main/deployments/genlayer/bradbury-v3.json`
 5. Architecture and payout specification
    `https://github.com/JWattjr/moment-grid-genlayer/blob/main/docs/ONCHAIN_GAME.md`
 6. Optional recording, after it exists
@@ -46,19 +46,19 @@ Do not add localhost links, private Vercel deployment URLs, fixture-only screens
 | Solves a real trust problem | The owner/frontend cannot supply match results. Validators interpret independently registered public football evidence. |
 | Uses live or authoritative data | The active resolver uses immutable BBC Sport and TheSportsDB match pages; settled reusable proofs use BBC Sport and ESPN. |
 | Complete source and accurate docs | Three Intelligent Contracts, Next.js client, pure scoring package, 49 direct tests, source policy, architecture, runbooks, deployment manifests, and receipts are public. |
-| Frontend genuinely calls the contract | Wallet-backed payable entry, resolution/retry, callback redispatch, batched processing, refunds, and pull claims all wait for finalized successful execution. Read routes recover contract state. |
+| Frontend genuinely calls the contract | Wallet-backed payable entry reports successful validator acceptance immediately and tracks finality; resolution/retry, callback redispatch, batched processing, refunds, and pull claims verify their required finalized state. Read routes recover contract state. |
 | Meaningfully different from boilerplate | Nine economically isolated rarity-weighted pools, evidence-coverage refunds, liquidity/unique-grid gates, horizontal-plus-diagonal jackpot, rollover, persistent positions, and permissionless recovery form one product loop. |
 | Credible path to continued use | A real future fixture, round lobby, entries, leaderboard, two disclosed player bots, separate keeper policy, safer-play constraints, and product KPIs are implemented or documented. |
 
 ## Reviewer proof anchors
 
-### StudioNet V3
+### Bradbury V3
 
-- Game: `0x9f95bDD3E4a2479b8f628599cc672E7a519C0920`
-- Full-match resolver: `0xDa0569bE8c8d148D3F2f6Fba5aC00a39bFc64590`
-- Public round: `epl-2026-08-21-arsenal-coventry-studionet-v3`
+- Game: `0x4bff4e5b50E21D25988D8029A7535E8111Eb62eF`
+- Full-match resolver: `0x901327a3D6D1d91baa57542bd27eAf336bC604d7`
+- Public round: `epl-2026-08-21-arsenal-coventry-bradbury-v3`
 - Public round at preparation time: OPEN, 2 disclosed fixed-grid bots, 2 unique grids, 2 test GEN escrow, 0.1 test GEN jackpot, liquidity gate met.
-- Both deployment receipts finalized with `MAJORITY_AGREE` and successful execution. The round registration and creation also finalized successfully.
+- Both deployment receipts reached validator `ACCEPTED` with `AGREE`, successful execution, readable schemas, and version `3.0.0`. Finality remains observable during Bradbury's appeal window. Round registration, creation, and both bot entries were accepted with successful execution and verified state reads.
 
 ### Studionet reusable contract
 
@@ -71,7 +71,7 @@ Do not add localhost links, private Vercel deployment URLs, fixture-only screens
 
 - [x] Public GitHub repository opens while signed out.
 - [x] Public live application opens while signed out.
-- [x] StudioNet game and resolver are deployed and report `3.0.0`.
+- [x] Fresh Bradbury game and resolver are deployed and report `3.0.0`.
 - [x] Public future round has two distinct disclosed bot grids, a 1 GEN floor, and its liquidity gate is met.
 - [x] Controlled accounts are labeled as test activity in UI and manifests.
 - [x] Live reviewer route exposes settled TRUE and FALSE records.
@@ -79,12 +79,12 @@ Do not add localhost links, private Vercel deployment URLs, fixture-only screens
 - [x] Direct Mode suite passes 49/49 tests, including an exact nine-independent-pool payout case.
 - [x] The Bradbury V2 callback-order discrepancy is documented and removed in V3 through separate resolve and dispatch transactions.
 - [ ] Optional 90-second public recording is uploaded and its URL is added as evidence.
-- [x] Final production build is deployed and visually rechecked after the documentation/UI polish commit.
+- [ ] Final Bradbury production build is deployed and visually rechecked after the acceptance-first UI commit.
 
 The video is optional but likely improves review speed and highlight potential. Do not spend a Portal Project slot until the production deployment and evidence links are rechecked while signed out.
 
 ## Optional public post copy
 
 ```text
-Moment Grid V3 is live on GenLayer StudioNet: a 3×3 football prediction game where players stake from 1 test GEN across nine independent cell pools. GenLayer validators settle granular match moments from immutable public evidence; deterministic on-chain code drives payouts, partial evidence refunds, or full timeout recovery. Two fixed-grid bots are publicly disclosed so a player can always join a liquid round. Live: https://moment-grid-genlayer.vercel.app Source: https://github.com/JWattjr/moment-grid-genlayer
+Moment Grid V3 is live on GenLayer Bradbury: a 3×3 football prediction game where players stake from 1 test GEN across nine independent cell pools. Validator-accepted entries appear immediately while finality continues in the background. GenLayer consensus settles granular match moments from immutable public evidence; deterministic code drives payouts, partial evidence refunds, or full timeout recovery. Two fixed-grid bots are publicly disclosed so a player can always join a liquid round. Live: https://moment-grid-genlayer.vercel.app Source: https://github.com/JWattjr/moment-grid-genlayer
 ```

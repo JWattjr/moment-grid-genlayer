@@ -1,7 +1,7 @@
 import { packGrid, type PredictionId } from "@moment-grid/scoring";
 import { createClient } from "genlayer-js";
 import { localnet, studionet, testnetBradbury } from "genlayer-js/chains";
-import { ExecutionResult, TransactionStatus, type CalldataEncodable } from "genlayer-js/types";
+import { ExecutionResult, TransactionStatus, type CalldataEncodable, type TransactionHash } from "genlayer-js/types";
 import { formatEther, isAddress, parseEther } from "viem";
 import type { GenLayerProvider } from "./genlayer-resolver";
 
@@ -89,13 +89,13 @@ export type GameCellPool = {
 };
 
 type GenLayerClientConfig = NonNullable<Parameters<typeof createClient>[0]>;
-const networkSetting = process.env.NEXT_PUBLIC_GENLAYER_GAME_NETWORK ?? "studionet";
+const networkSetting = process.env.NEXT_PUBLIC_GENLAYER_GAME_NETWORK ?? "testnet-bradbury";
 const networks = {
   localnet: { chain: localnet, connectName: "localnet" as const },
   studionet: { chain: studionet, connectName: "studionet" as const },
   "testnet-bradbury": { chain: testnetBradbury, connectName: "testnetBradbury" as const },
 };
-const selectedNetwork = networks[networkSetting as keyof typeof networks] ?? networks.studionet;
+const selectedNetwork = networks[networkSetting as keyof typeof networks] ?? networks["testnet-bradbury"];
 const contractAddress = process.env.NEXT_PUBLIC_GENLAYER_GAME_ADDRESS ?? "";
 const resolverAddress = process.env.NEXT_PUBLIC_GENLAYER_ROUND_RESOLVER_ADDRESS ?? "";
 const roundId = process.env.NEXT_PUBLIC_GENLAYER_GAME_ROUND_ID ?? "";
@@ -119,7 +119,7 @@ export const genLayerGameConfig = {
   activeRoundEnabled: isAddress(contractAddress) && isAddress(resolverAddress) && Boolean(roundId),
   testBotAddress: botAddresses[0] ?? "",
   botAddresses,
-  deploymentLabel: networkSetting === "studionet" ? "StudioNet V3" : networkSetting === "testnet-bradbury" ? "Bradbury V2" : "Localnet",
+  deploymentLabel: networkSetting === "studionet" ? "StudioNet V3" : networkSetting === "testnet-bradbury" ? "Bradbury V3" : "Localnet",
   networkLabel: networkSetting === "studionet" ? "StudioNet" : networkSetting === "testnet-bradbury" ? "Bradbury testnet" : "Localnet",
 };
 
@@ -168,9 +168,11 @@ async function writeFinalized(
   const hash = await writeClient.writeContract({ address, functionName, args, value });
   onSubmitted?.(hash);
   const receipt = await client().waitForTransactionReceipt({
-    hash,
+    hash: hash as TransactionHash,
     status: TransactionStatus.FINALIZED,
-    interval: 3_000,
+    // Bradbury commonly needs around 30 minutes to finalize. Lifecycle writes
+    // must keep waiting instead of presenting a false timeout after 12 minutes.
+    interval: 15_000,
     retries: 240,
   });
   const leaderExecution = (receipt as unknown as { consensus_data?: { leader_receipt?: Array<{ execution_result?: string }> } })
@@ -179,6 +181,47 @@ async function writeFinalized(
     throw new Error(`GenLayer finalized the transaction, but execution failed (${receipt.txExecutionResultName ?? leaderExecution ?? "UNKNOWN"}).`);
   }
   return hash;
+}
+
+async function writeAccepted(
+  account: `0x${string}`,
+  provider: GenLayerProvider,
+  address: `0x${string}`,
+  functionName: string,
+  args: CalldataEncodable[],
+  value = 0n,
+  onSubmitted?: (hash: `0x${string}`) => void,
+): Promise<`0x${string}`> {
+  const writeClient = client(account, provider);
+  await writeClient.connect(selectedNetwork.connectName);
+  const hash = await writeClient.writeContract({ address, functionName, args, value });
+  onSubmitted?.(hash);
+  const receipt = await client().waitForTransactionReceipt({
+    hash,
+    status: TransactionStatus.ACCEPTED,
+    interval: 3_000,
+    retries: 240,
+  });
+  const leaderExecution = (receipt as unknown as { consensus_data?: { leader_receipt?: Array<{ execution_result?: string }> } })
+    .consensus_data?.leader_receipt?.[0]?.execution_result;
+  if (receipt.txExecutionResultName !== ExecutionResult.FINISHED_WITH_RETURN && leaderExecution !== "SUCCESS") {
+    throw new Error(`GenLayer accepted the transaction, but execution failed (${receipt.txExecutionResultName ?? leaderExecution ?? "UNKNOWN"}).`);
+  }
+  return hash;
+}
+
+export async function waitForGameTransactionFinality(hash: `0x${string}`): Promise<void> {
+  const receipt = await client().waitForTransactionReceipt({
+    hash: hash as TransactionHash,
+    status: TransactionStatus.FINALIZED,
+    interval: 15_000,
+    retries: 240,
+  });
+  const leaderExecution = (receipt as unknown as { consensus_data?: { leader_receipt?: Array<{ execution_result?: string }> } })
+    .consensus_data?.leader_receipt?.[0]?.execution_result;
+  if (receipt.txExecutionResultName !== ExecutionResult.FINISHED_WITH_RETURN && leaderExecution !== "SUCCESS") {
+    throw new Error(`GenLayer finalized the transaction, but execution failed (${receipt.txExecutionResultName ?? leaderExecution ?? "UNKNOWN"}).`);
+  }
 }
 
 export function parseStake(value: string, minimumStake = MINIMUM_STAKE_WEI, maximumStake = MAXIMUM_STAKE_WEI): bigint {
@@ -253,7 +296,7 @@ export async function readCellPools(selectedRoundId = roundId): Promise<GameCell
 type Submitted = (hash: `0x${string}`) => void;
 
 export function enterGameRound(account: `0x${string}`, provider: GenLayerProvider, grid: PredictionId[], stake: bigint, selectedRoundId = roundId, onSubmitted?: Submitted) {
-  return writeFinalized(account, provider, gameAddress(), "join_round", [selectedRoundId, packGrid(grid)], stake, onSubmitted);
+  return writeAccepted(account, provider, gameAddress(), "join_round", [selectedRoundId, packGrid(grid)], stake, onSubmitted);
 }
 
 export function resolveGameRound(account: `0x${string}`, provider: GenLayerProvider, resolutionId: string, onSubmitted?: Submitted) {

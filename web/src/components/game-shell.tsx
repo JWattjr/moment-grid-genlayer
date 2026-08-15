@@ -55,6 +55,7 @@ const QA_FIXTURE: FixtureLabel = { home: "Motagua", away: "Cartagines", homeCode
 const DEMO_FIXTURE: FixtureLabel = { home: "Arsenal", away: "Chelsea", homeCode: "ARS", awayCode: "CHE" };
 const REGISTERED_FIXTURE: FixtureLabel = { home: "Registered home", away: "Registered away", homeCode: "HOME", awayCode: "AWAY" };
 const FIXTURES_BY_ID: Record<string, FixtureLabel> = {
+  "epl-2026-08-21-arsenal-coventry-bradbury-v3": LIVE_FIXTURE,
   "epl-2026-08-21-arsenal-coventry-studionet-v3": LIVE_FIXTURE,
   "epl-2026-08-21-arsenal-coventry-v2": LIVE_FIXTURE,
   "epl-arsenal-coventry-2026-08-21": LIVE_FIXTURE,
@@ -470,7 +471,7 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
     <div className="screen-stack">
       <button className="back-button" onClick={onBack}><ArrowLeft size={16} /> Edit grid</button>
       <div><span className="step-label">02 · Lock</span><h1>Commit to your calls.</h1></div>
-      <p className="lede">{onchainGame.configured ? "Predictions cannot change after the signed entry finalizes. The registered match and evidence window are fixed before play." : "Predictions cannot change after the replay begins. Registered match moments are verified before play."}</p>
+      <p className="lede">{onchainGame.configured ? "Predictions cannot change after the signed entry is accepted. Bradbury finality continues in the background while the registered match and evidence window stay fixed." : "Predictions cannot change after the replay begins. Registered match moments are verified before play."}</p>
       <ResolutionJourney stage="locked" />
       {onchainGame.configured ? (
         <div className="stake-card" aria-label="On-chain stake allocation">
@@ -494,7 +495,7 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
       <div className="lock-card"><div className="lock-icon"><LockKeyhole size={20} /></div><div><strong>{onchainGame.configured ? "One signed entry, nine live pools" : "Grid fixed for this replay"}</strong><p>{onchainGame.configured ? "The payable transaction stores your grid and allocates your GEN on-chain." : "Your nine selections are now the immutable scoring input."}</p></div></div>
       {onchainGame.configured && <div className="privacy-note"><ShieldCheck size={16} /><span>Jackpot requires a correct horizontal row plus a correct diagonal · {onchainGame.config.network}.</span></div>}
       {onchainGame.configured && !v2Ready && !onchainGame.entry && <p className="error-message">This legacy round is view-only. New stakes require a future kickoff and evidence window.</p>}
-      {confirmed && !onchainGame.entry && <div className="confirmation-card" role="alert"><strong>Confirm your maximum loss</strong><p>You are committing {stakeInput} testnet GEN to nine transparent pari-mutuel pools. Picks cannot be edited after finalization.</p></div>}
+      {confirmed && !onchainGame.entry && <div className="confirmation-card" role="alert"><strong>Confirm your maximum loss</strong><p>You are committing {stakeInput} testnet GEN to nine transparent pari-mutuel pools. Picks cannot be edited after acceptance.</p></div>}
       {!onchainGame.configured && genLayerConfigured && genLayerResolverConfig.moment && grid.includes(genLayerResolverConfig.moment.prediction_id as PredictionId) && <div className="privacy-note"><ShieldCheck size={16} /><span>{genLayerResolverConfig.moment.moment_statement} is pre-registered on {genLayerResolverConfig.network} · {phase === "READY" ? "ready" : "verified at lock"}.</span></div>}
       {error && <p className="error-message">{error}</p>}
       <button className="primary-button pulse-button" onClick={requestLock} disabled={busy || (onchainGame.configured && !onchainGame.entry && (!allocation || !v2Ready))}>{busy ? (onchainGame.configured ? `${onchainGame.transactionStage.toLowerCase()}…` : "Checking GenLayer registration…") : onchainGame.entry ? "Entry secured · view position" : onchainGame.configured ? confirmed ? `Confirm & sign ${stakeInput || "0"} GEN` : `Review ${stakeInput || "0"} GEN stake` : "Lock & start replay"} <LockKeyhole size={17} /></button>
@@ -725,6 +726,7 @@ function OnchainRoundPanel({ game }: { game: OnchainGame; previewJackpotQualifie
       {(round?.status === "SETTLED" || round?.status === "REFUNDING") && canClaim && <button type="button" onClick={() => void game.claim()} disabled={game.busy}>Claim {formatGen(entry!.claimable)} GEN</button>}
       <button className="onchain-refresh" type="button" onClick={() => void game.refresh()} disabled={game.busy}>Refresh chain state</button>
       {game.transactionHash && <p>Transaction {game.transactionHash.slice(0, 10)}…{game.transactionHash.slice(-6)} · {game.transactionStage.toLowerCase()}.</p>}
+      {game.transactionStage === "ACCEPTED" && <p role="status">Accepted by Bradbury validators. Your entry is visible now; irreversible finality continues in the background.</p>}
       {game.error && <p className="error-message">{game.error}</p>}
     </section>
   );

@@ -65,8 +65,9 @@ or claimable balances.
 ## Network progression
 
 Local direct tests cover validation, packing, scoring, all nine independent pool
-ledgers, and refund rules. The public playable V3 flow runs on StudioNet with
-test GEN. Bradbury V2 remains preserved for historical position recovery only.
+ledgers, and refund rules. The public playable V3 flow runs on fresh Bradbury
+contracts with test GEN. Bradbury V2 remains preserved for historical position
+recovery only; StudioNet V3 remains a pre-production deployment record.
 
 ## V3 lifecycle safety
 
@@ -74,6 +75,9 @@ test GEN. Bradbury V2 remains preserved for historical position recovery only.
 The owner can cancel only before lock. After lock, recovery is permissionless.
 Contract pause stops new rounds and entries but never blocks scoring, refunds,
 claims, or withdrawals. Ownership transfer uses a two-step proposal and
-acceptance. All wallet writes wait for `FINALIZED`, accept both normalized SDK
-and raw StudioNet receipt shapes, and verify successful execution before the UI
-reports completion.
+acceptance. Player entries wait for validator `ACCEPTED` state, verify successful
+execution, expose a clearly provisional locked position, and track the Bradbury
+appeal/finality window in the background. Resolution dispatch, settlement,
+refund, and claim actions wait for finalized predecessor state. Both normalized
+SDK and raw consensus receipt shapes are checked; lifecycle status alone is
+never reported as execution success.

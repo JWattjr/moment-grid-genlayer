@@ -28,8 +28,8 @@ rolling jackpot.
 
 ## Testnet launch gate
 
-- [x] Deploy fresh V3 game and resolver contracts on StudioNet and verify both
-  report version `3.0.0` with finalized successful receipts.
+- [x] Deploy fresh V3 game and resolver contracts on Bradbury and verify both
+  report version `3.0.0` with accepted successful receipts and readable schemas.
 - [x] Register the 21 August 2026 Arsenal–Coventry fixture with BBC and
   TheSportsDB URLs, a 1 GEN floor, and explicit post-match/refund windows.
 - [x] Seed Form Bot and Chaos Bot at 1 test GEN each with public fixed grids;
@@ -39,10 +39,12 @@ rolling jackpot.
   pending, proving automatic child callbacks were unsafe. V3 requires a
   separate permissionless dispatch after durable consensus.
 - [x] Record accepted deployment receipts in `deployments/genlayer/`.
-- [x] Record StudioNet finality and successful execution for both V3 deployments.
-- [x] Update Vercel environment variables and visually verify the public game,
+- [x] Implement acceptance-first Bradbury entries with explicit provisional UI
+  and background finality tracking; keep settlement and claims finality-gated.
+- [ ] Record Bradbury finality for both V3 deployments after the appeal window.
+- [ ] Update Vercel environment variables and visually verify the public game,
   rounds, entries, consensus proof, integrity, and responsible-play routes.
-- [ ] Publish a 90-second reviewer recording after the StudioNet V3 release is live.
+- [ ] Publish a 90-second reviewer recording after the Bradbury V3 release is live.
 
 ## Mainnet / real-value blockers
 
