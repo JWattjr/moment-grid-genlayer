@@ -64,7 +64,7 @@ Detailed accounting and failure behavior are in [docs/ONCHAIN_GAME.md](docs/ONCH
 | Public round state | OPEN · 2 disclosed bots · 2 unique grids · 2 test GEN escrow · liquidity gate met |
 | Minimum entry | 1 test GEN |
 
-Form Bot and Chaos Bot each committed a distinct public fixed grid and exactly 1 test GEN before human play. They provide disclosed baseline liquidity, are never described as organic users, and are excluded from the human leaderboard. Every one of the nine cells keeps an independent pool and option ledger. Exact inputs, accepted receipts, and state are recorded in [deployments/genlayer/bradbury-v3.json](deployments/genlayer/bradbury-v3.json).
+Form Bot and Chaos Bot each committed a distinct public fixed grid and exactly 1 test GEN before human play. They provide disclosed baseline liquidity, are never described as organic users, and are excluded from the human leaderboard. Every one of the nine cells keeps an independent pool and option ledger. Exact inputs, finalized receipts, and state are recorded in [deployments/genlayer/bradbury-v3.json](deployments/genlayer/bradbury-v3.json).
 
 Player entries use an acceptance-first Bradbury experience: successful validator `ACCEPTED` state immediately reveals the immutable entry and pool position while the UI tracks the longer appeal/finality window in the background. Resolution dispatch, settlement, and claims still require finalized predecessor state.
 
@@ -146,6 +146,7 @@ See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md), [docs/GENLAYER_SOURCE_POLICY.m
 
 ## Submission assets
 
+- [Portal submit-now sheet](docs/SUBMIT_NOW.md)
 - [Ready-to-paste Project contribution](docs/GENLAYER_SUBMISSION.md)
 - [Reviewer demo recording script](docs/DEMO_SCRIPT.md)
 - [Bradbury V3 operation](docs/BRADBURY_V3_RUNBOOK.md)

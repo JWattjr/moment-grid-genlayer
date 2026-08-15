@@ -38,10 +38,11 @@ rolling jackpot.
   settled and both controlled wallets claimed while the resolver record stayed
   pending, proving automatic child callbacks were unsafe. V3 requires a
   separate permissionless dispatch after durable consensus.
-- [x] Record accepted deployment receipts in `deployments/genlayer/`.
+- [x] Record deployment and round receipts in `deployments/genlayer/`.
 - [x] Implement acceptance-first Bradbury entries with explicit provisional UI
   and background finality tracking; keep settlement and claims finality-gated.
-- [ ] Record Bradbury finality for both V3 deployments after the appeal window.
+- [x] Record Bradbury finality for both V3 deployments, round setup, and both
+  disclosed bot entries after the appeal window.
 - [x] Update Vercel environment variables and visually verify the public game,
   rounds, entries, consensus proof, integrity, and responsible-play routes.
 - [ ] Publish a 90-second reviewer recording after the Bradbury V3 release is live.

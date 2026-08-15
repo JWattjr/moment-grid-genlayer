@@ -12,10 +12,10 @@ Moment Grid — GenLayer-Settled Football Prediction Game
 
 ### Notes / Description
 
-The following copy is below the Portal's 1,000-character limit.
+The following copy is **888 characters**, below the Portal's 1,000-character limit.
 
 ```text
-Moment Grid is a fully playable 3×3 football prediction game on GenLayer Bradbury. Players sign one payable transaction to lock nine match calls from a 1 test GEN minimum. Every square is a separate loser-funded pari-mutuel pool; rows set only allocation weight. The app shows validator-accepted entries immediately and tracks Bradbury finality in the background. After full time, a permissionless Intelligent Contract asks validators to read immutable BBC/TheSportsDB evidence and agree on truth plus coverage bitmaps. Consensus is stored first, then separately dispatched to the game. Deterministic on-chain code scores grids, refunds unsupported calls, distributes each cell independently, and opens jackpot claims or full recovery. Resolution dispatch, settlement, and claims stay finality-gated. V3 is live with two disclosed fixed-grid bots, 49 direct tests, and public receipts.
+Moment Grid is a fully playable 3×3 football prediction game on GenLayer Bradbury. Players sign one payable transaction to lock nine match calls from a 1 test GEN minimum. Every square is a separate loser-funded pari-mutuel pool; rows set only allocation weight. The app shows validator-accepted entries immediately and tracks Bradbury finality in the background. After full time, a permissionless Intelligent Contract asks validators to read immutable BBC/TheSportsDB evidence and agree on truth plus coverage bitmaps. Consensus is stored first, then separately dispatched to the game. Deterministic on-chain code scores grids, refunds unsupported calls, distributes each cell independently, and opens jackpot claims or full recovery. Resolution dispatch, settlement, and claims stay finality-gated. V3 is live with two disclosed fixed-grid bots, 49 direct tests, and finalized receipts.
 ```
 
 Keep this copy below the Portal's 1,000-character limit when editing.
@@ -39,6 +39,8 @@ Add these as separate evidence items in this order:
 
 Do not add localhost links, private Vercel deployment URLs, fixture-only screenshots, or a video URL that reviewers cannot open without signing in.
 
+For a minimal field-by-field paste sheet, use [`SUBMIT_NOW.md`](SUBMIT_NOW.md).
+
 ## Quality-bar mapping
 
 | Portal criterion | Reviewer evidence |
@@ -58,7 +60,7 @@ Do not add localhost links, private Vercel deployment URLs, fixture-only screens
 - Full-match resolver: `0x901327a3D6D1d91baa57542bd27eAf336bC604d7`
 - Public round: `epl-2026-08-21-arsenal-coventry-bradbury-v3`
 - Public round at preparation time: OPEN, 2 disclosed fixed-grid bots, 2 unique grids, 2 test GEN escrow, 0.1 test GEN jackpot, liquidity gate met.
-- Both deployment receipts reached validator `ACCEPTED` with `AGREE`, successful execution, readable schemas, and version `3.0.0`. Finality remains observable during Bradbury's appeal window. Round registration, creation, and both bot entries were accepted with successful execution and verified state reads.
+- Both deployments, round registration, round creation, and both bot entries are `FINALIZED` with successful execution. Both contracts expose readable schemas and report version `3.0.0`; the round and all nine pool ledgers were verified from contract reads.
 
 ### Studionet reusable contract
 
