@@ -43,11 +43,33 @@ async function mockHistory(page: Page, results: Result[]) {
   });
 }
 
-test("player can random-fill, review, and lock the demo grid", async ({ page }) => {
+async function markGuideComplete(page: Page) {
+  await page.addInitScript(() => {
+    window.localStorage.setItem("moment-grid-guided-play-v1", JSON.stringify({ version: 1, step: "complete", status: "complete" }));
+  });
+}
+
+test("guided play highlights the next real action and waits for the player", async ({ page }) => {
   await page.goto("/");
-  const skip = page.getByRole("button", { name: "Skip" });
-  await skip.waitFor({ state: "visible", timeout: 3_000 }).catch(() => undefined);
-  if (await skip.isVisible()) await skip.click();
+  await expect(page.getByRole("heading", { name: "Choose your first square" })).toBeVisible();
+  await expect(page.getByText("Guided play · 1 of 7")).toBeVisible();
+  await page.waitForTimeout(500);
+  await expect(page.getByRole("heading", { name: "Choose your first square" })).toBeVisible();
+
+  await page.locator('[data-guide="pick-cell"]').click();
+  await expect(page.getByRole("heading", { name: "Choose a prediction" })).toBeVisible();
+  await page.locator('[data-guide="prediction-option"]').click();
+  await expect(page.getByRole("heading", { name: "Complete the grid" })).toBeVisible();
+  await page.locator('[data-guide="random-fill"]').click();
+  await expect(page.getByRole("heading", { name: "Review your nine picks" })).toBeVisible();
+  await page.locator('[data-guide="review-grid"]').click();
+  await expect(page.getByRole("heading", { name: "Review the stake" })).toBeVisible();
+  await expect(page.locator('[data-guide="review-stake"]')).toBeVisible();
+});
+
+test("player can random-fill, review, and lock the demo grid", async ({ page }) => {
+  await markGuideComplete(page);
+  await page.goto("/");
   await page.getByRole("button", { name: "Random fill" }).click();
   await expect(page.getByRole("button", { name: "Review my grid" })).toBeEnabled();
   await page.getByRole("button", { name: "Review my grid" }).click();
@@ -55,6 +77,14 @@ test("player can random-fill, review, and lock the demo grid", async ({ page }) 
   const legacyGuard = page.getByText(/legacy replay round is view-only/i);
   if (await legacyGuard.isVisible()) {
     await expect(page.getByRole("button", { name: /review 10 gen stake/i })).toBeDisabled();
+  } else if (await page.getByRole("button", { name: /review .* gen stake/i }).isVisible()) {
+    const reviewStake = page.getByRole("button", { name: /review .* gen stake/i });
+    if (await reviewStake.isEnabled()) {
+      await reviewStake.click();
+      await expect(page.getByRole("button", { name: /confirm & sign .* gen/i })).toBeVisible();
+    } else {
+      await expect(reviewStake).toBeDisabled();
+    }
   } else {
     await page.getByRole("button", { name: "Lock & start replay" }).click({ force: true });
     await expect(page.getByText("Your predictions are locked")).toBeVisible();

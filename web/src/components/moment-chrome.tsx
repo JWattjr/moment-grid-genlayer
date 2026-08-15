@@ -12,7 +12,7 @@ const NAV_ITEMS = [
   { href: "/leaderboard", label: "Ranks" },
 ] as const;
 
-export function MomentHeader({ feedbackEnabled, onOpenTutorial, onToggleFeedback }: { feedbackEnabled?: boolean; onOpenTutorial?: () => void; onToggleFeedback?: () => void }) {
+export function MomentHeader({ feedbackEnabled, onOpenGuide, onToggleFeedback }: { feedbackEnabled?: boolean; onOpenGuide?: () => void; onToggleFeedback?: () => void }) {
   return (
     <header className="app-header">
       <Link className="wordmark" href="/" aria-label="Moment Grid home">
@@ -20,7 +20,7 @@ export function MomentHeader({ feedbackEnabled, onOpenTutorial, onToggleFeedback
         MOMENT<span>GRID</span>
       </Link>
       <div className="header-actions">
-        {onOpenTutorial && <button className="feedback-toggle" type="button" onClick={onOpenTutorial} aria-label="Open how-to-play tutorial" title="How to play"><HelpCircle size={14} /></button>}
+        {onOpenGuide && <button className="feedback-toggle" type="button" onClick={onOpenGuide} aria-label="Start guided play" title="Guided play"><HelpCircle size={14} /></button>}
         {onToggleFeedback && (
           <button className="feedback-toggle" type="button" onClick={onToggleFeedback} aria-label={`${feedbackEnabled ? "Disable" : "Enable"} game sound and vibration`} title="Sound and vibration">
             {feedbackEnabled ? <Volume2 size={14} /> : <VolumeX size={14} />}

@@ -1446,40 +1446,37 @@ h1 { color: var(--ink); font-size: clamp(31px,8.7vw,39px); line-height: .98; let
 .theme-club .lede { font-size: 10.6px; }
 .theme-club .privacy-note { font-size: 9.2px; line-height: 1.35; }
 
-.tutorial-backdrop {
+.guided-play { position: fixed; z-index: 90; inset: 0; pointer-events: none; }
+.guided-play-focus {
   position: fixed;
-  z-index: 80;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(20,23,38,.78);
-  backdrop-filter: blur(8px);
-  animation: tutorial-fade .22s ease-out both;
+  border: 3px solid var(--gold);
+  border-radius: 5px;
+  box-shadow: 0 0 0 9999px rgba(12,16,38,.72), 0 0 0 5px rgba(200,243,74,.28), 5px 5px 0 var(--ink);
+  pointer-events: none;
+  animation: guide-focus 1.4s ease-in-out infinite;
 }
-.tutorial-card {
-  width: min(100%, 370px);
-  padding: 16px;
+.guided-play-card {
+  --guide-card-width: 310px;
+  position: fixed;
+  width: var(--guide-card-width);
+  padding: 13px;
   border: 3px solid var(--ink);
   color: var(--ink);
   background:
     radial-gradient(rgba(20,23,38,.12) .7px,transparent .8px) 0 0 / 7px 7px,
     var(--paper);
-  box-shadow: 8px 8px 0 var(--ink);
-  animation: tutorial-drop .48s cubic-bezier(.18,1.45,.35,1) both;
+  box-shadow: 7px 7px 0 var(--ink);
+  pointer-events: auto;
+  animation: guide-card-in .28s cubic-bezier(.18,1.2,.35,1) both;
 }
-.tutorial-top { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-family: "IBM Plex Mono",monospace; font-size: 8px; font-weight: 700; letter-spacing: .8px; text-transform: uppercase; }
-.tutorial-top button { padding: 4px 6px; border: 1.5px solid var(--ink); color: var(--ink); background: #ff9fb9; box-shadow: 2px 2px 0 var(--ink); font-size: 8px; font-weight: 700; cursor: pointer; }
-.tutorial-visual { position: relative; height: 126px; display: grid; place-items: center; overflow: hidden; margin: 13px 0; border: 2px solid var(--ink); background: #3156d8; }
-.tutorial-visual > div { position: relative; z-index: 2; width: 70px; height: 70px; display: grid; place-items: center; border: 2px solid var(--ink); border-radius: 50%; background: var(--gold); box-shadow: 4px 4px 0 var(--ink); animation: tutorial-icon-bop 2.2s ease-in-out infinite; }
-.tutorial-orbit { position: absolute; width: 112px; height: 112px; border: 2px dashed var(--paper); border-radius: 50%; animation: spin 9s linear infinite; }
-.tutorial-card .step-label { color: var(--ink); }
-.tutorial-card h2 { margin: 9px 0 7px; color: var(--ink); font-family: "Archivo Black",Impact,sans-serif; font-size: 24px; font-weight: 400; line-height: 1; text-shadow: none; }
-.tutorial-card > p { min-height: 48px; margin: 0; color: var(--muted); font-family: "IBM Plex Mono",monospace; font-size: 10px; line-height: 1.5; }
-.tutorial-dots { display: flex; gap: 5px; margin: 13px 0; }
-.tutorial-dots i { width: 25px; height: 5px; border: 1px solid var(--ink); background: #c9c4b6; }
-.tutorial-dots i.is-active { background: var(--gold); animation: progress-bop .35s cubic-bezier(.2,1.6,.35,1) both; }
-.tutorial-card .primary-button { min-height: 46px; }
+.guided-play-card header { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.guided-play-card header span { color: var(--coral); font-family: "IBM Plex Mono",monospace; font-size: 8px; font-weight: 800; letter-spacing: .7px; text-transform: uppercase; }
+.guided-play-card header button { display: flex; align-items: center; gap: 3px; padding: 4px 6px; border: 1.5px solid var(--ink); color: var(--ink); background: #ff9fb9; box-shadow: 2px 2px 0 var(--ink); font-family: "IBM Plex Mono",monospace; font-size: 8px; font-weight: 800; cursor: pointer; }
+.guided-play-card h2 { margin: 10px 0 6px; color: var(--ink); font-family: "Archivo Black",Impact,sans-serif; font-size: 20px; font-weight: 400; line-height: 1.05; text-shadow: none; }
+.guided-play-card p { margin: 0; color: var(--muted); font-family: "IBM Plex Mono",monospace; font-size: 9.5px; line-height: 1.45; }
+.guided-play-card > small { display: block; margin-top: 8px; color: var(--coral); font-family: "IBM Plex Mono",monospace; font-size: 8px; font-weight: 700; }
+.guided-play-done { width: 100%; min-height: 37px; display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 11px; border: 2px solid var(--ink); color: var(--ink); background: var(--gold); box-shadow: 3px 3px 0 var(--ink); font-family: "IBM Plex Mono",monospace; font-size: 9px; font-weight: 800; text-transform: uppercase; cursor: pointer; }
+.guided-play-done:active { transform: translate(3px,3px); box-shadow: none; }
 
 .privacy-journey { display: grid; grid-template-columns: repeat(3,1fr); gap: 4px; padding: 4px; border: 2px solid var(--ink); background: var(--paper); box-shadow: 3px 3px 0 var(--ink); }
 .privacy-journey > div { position: relative; min-height: 37px; display: flex; align-items: center; justify-content: center; gap: 5px; color: #8b8b94; background: #ded9ca; }
@@ -1538,15 +1535,11 @@ h1 { color: var(--ink); font-size: clamp(31px,8.7vw,39px); line-height: .98; let
 }
 .share-result-button:active { transform: translate(3px,3px) scale(.96); box-shadow: 0 0 0 var(--ink); }
 
-@keyframes tutorial-fade { from { opacity: 0; } }
-@keyframes tutorial-drop {
-  from { opacity: 0; transform: translateY(35px) scale(.84) rotate(-2deg); }
-  70% { transform: translateY(-4px) scale(1.025) rotate(.5deg); }
+@keyframes guide-focus {
+  0%, 100% { border-color: var(--gold); }
+  50% { border-color: #fff; }
 }
-@keyframes tutorial-icon-bop {
-  0%, 100% { transform: translateY(0) rotate(-3deg); }
-  50% { transform: translateY(-7px) rotate(4deg) scale(1.04); }
-}
+@keyframes guide-card-in { from { opacity: 0; transform: translateY(10px) scale(.96); } }
 @keyframes privacy-stage {
   from { transform: scale(.75); }
   65% { transform: scale(1.08); }
@@ -1559,18 +1552,13 @@ h1 { color: var(--ink); font-size: clamp(31px,8.7vw,39px); line-height: .98; let
 }
 
 @media (max-height: 760px) {
-  .tutorial-visual { height: 105px; }
-  .tutorial-card > p { min-height: 42px; }
   .privacy-journey > div { min-height: 31px; }
   .match-reaction { top: 95px; min-height: 180px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .tutorial-backdrop,
-  .tutorial-card,
-  .tutorial-visual > div,
-  .tutorial-orbit,
-  .tutorial-dots i,
+  .guided-play-focus,
+  .guided-play-card,
   .privacy-journey > div,
   .match-reaction { animation: none !important; }
 }

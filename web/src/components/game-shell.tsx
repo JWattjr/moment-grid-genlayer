@@ -39,17 +39,22 @@ import { formatGen, MINIMUM_STAKE_GEN, MINIMUM_STAKE_WEI, stakeAllocation } from
 import { useOnchainGame } from "@/lib/use-onchain-game";
 import { useMatchSource } from "@/lib/use-match-source";
 import { MomentHeader, MomentNav } from "./moment-chrome";
+import { GuidedPlay, type GuideStep } from "./guided-play";
 
 type Screen = "build" | "lock" | "watch" | "reveal" | "reward";
 type Grid = Array<PredictionId | null>;
 type FeedbackCue = "tap" | "confirm" | "lock" | "event" | "reveal" | "reward";
 type OnchainGame = ReturnType<typeof useOnchainGame>;
 type FixtureLabel = { home: string; away: string; homeCode: string; awayCode: string };
+type GuideStatus = "active" | "paused" | "complete";
+type StoredGuide = { version: 1; step: GuideStep; status: GuideStatus };
 
 const SCREEN_ORDER: Screen[] = ["build", "lock", "watch", "reveal", "reward"];
 const TIER_NAMES = ["Common", "Medium", "Rare"];
 const TIER_CODES = ["C", "M", "R"];
 const WINDOW_LABELS = ["0–30", "30–60", "60–90+"];
+const GUIDE_STORAGE_KEY = "moment-grid-guided-play-v1";
+const GUIDE_STEPS = new Set<GuideStep>(["pick", "choose", "fill", "review", "stake", "sign", "accepting", "secured", "claim", "complete"]);
 const LIVE_FIXTURE: FixtureLabel = { home: "Arsenal", away: "Coventry City", homeCode: "ARS", awayCode: "COV" };
 const QA_FIXTURE: FixtureLabel = { home: "Motagua", away: "Cartagines", homeCode: "MOT", awayCode: "CAR" };
 const DEMO_FIXTURE: FixtureLabel = { home: "Arsenal", away: "Chelsea", homeCode: "ARS", awayCode: "CHE" };
@@ -98,6 +103,11 @@ function randomGrid(): PredictionId[] {
   });
 }
 
+function storeGuide(step: GuideStep, status: GuideStatus) {
+  const value: StoredGuide = { version: 1, step, status };
+  window.localStorage.setItem(GUIDE_STORAGE_KEY, JSON.stringify(value));
+}
+
 export function GameShell({ roundId }: { roundId?: string }) {
   const [screen, setScreen] = useState<Screen>("build");
   const [grid, setGrid] = useState<Grid>(() => Array(9).fill(null));
@@ -110,7 +120,8 @@ export function GameShell({ roundId }: { roundId?: string }) {
   const [stakeInput, setStakeInput] = useState(MINIMUM_STAKE_GEN);
   const [revealed, setRevealed] = useState(false);
   const [feedbackEnabled, setFeedbackEnabled] = useState(true);
-  const [showTutorial, setShowTutorial] = useState(false);
+  const [guideActive, setGuideActive] = useState(false);
+  const [guideStep, setGuideStep] = useState<GuideStep>("pick");
   const audioContext = useRef<AudioContext | null>(null);
 
   const completeGrid = grid.every((prediction): prediction is PredictionId => prediction !== null);
@@ -153,7 +164,24 @@ export function GameShell({ roundId }: { roundId?: string }) {
   useEffect(() => {
     const frame = window.requestAnimationFrame(() => {
       setFeedbackEnabled(window.localStorage.getItem("moment-grid-feedback") !== "off");
-      setShowTutorial(!window.localStorage.getItem("moment-grid-tutorial-seen"));
+      const saved = window.localStorage.getItem(GUIDE_STORAGE_KEY);
+      if (!saved) {
+        setGuideActive(true);
+        setGuideStep("pick");
+        storeGuide("pick", "active");
+        return;
+      }
+      try {
+        const parsed = JSON.parse(saved) as Partial<StoredGuide>;
+        if (parsed.version === 1 && parsed.step && GUIDE_STEPS.has(parsed.step) && parsed.status) {
+          setGuideStep(parsed.step);
+          setGuideActive(parsed.status === "active");
+        }
+      } catch {
+        setGuideActive(true);
+        setGuideStep("pick");
+        storeGuide("pick", "active");
+      }
     });
     return () => window.cancelAnimationFrame(frame);
   }, []);
@@ -207,25 +235,72 @@ export function GameShell({ roundId }: { roundId?: string }) {
     if (next) window.navigator.vibrate?.(18);
   };
 
-  const closeTutorial = () => {
-    window.localStorage.setItem("moment-grid-tutorial-seen", "1");
-    setShowTutorial(false);
+  const updateGuide = useCallback((step: GuideStep, status: GuideStatus = "active") => {
+    setGuideStep(step);
+    setGuideActive(status === "active");
+    storeGuide(step, status);
+  }, []);
+
+  const advanceGuide = useCallback((expected: GuideStep, next: GuideStep) => {
+    if (!guideActive || guideStep !== expected) return;
+    updateGuide(next);
+  }, [guideActive, guideStep, updateGuide]);
+
+  const openGuide = () => {
+    let next: GuideStep = "pick";
+    if (onchainGame.entry?.claimed) next = "complete";
+    else if (onchainGame.entry && onchainGame.entry.claimable > 0n) next = "claim";
+    else if (onchainGame.entry) next = "secured";
+    else if (pickerCell !== null) next = "choose";
+    else if (screen === "lock" && document.querySelector('[data-guide="sign-entry"]')) next = "sign";
+    else if (screen === "lock") next = "stake";
+    else if (screen === "build" && completeGrid) next = "review";
+    else if (screen === "build" && grid.some(Boolean)) next = "fill";
+    updateGuide(next);
+    playFeedback("tap");
+  };
+
+  const exitGuide = () => {
+    updateGuide(guideStep, "paused");
     playFeedback("confirm");
   };
+
+  useEffect(() => {
+    const entry = onchainGame.entry;
+    const action = onchainGame.action;
+    if (!entry && action !== "ERROR") return;
+    const frame = window.requestAnimationFrame(() => {
+      if (guideActive && (guideStep === "sign" || guideStep === "accepting") && entry) updateGuide("secured");
+      else if (guideActive && guideStep === "accepting" && action === "ERROR") updateGuide("sign");
+      else if (entry && !entry.claimed && entry.claimable > 0n && guideStep === "secured") updateGuide("claim");
+      else if (entry?.claimed && guideStep === "claim") updateGuide("complete");
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, [guideActive, guideStep, onchainGame.action, onchainGame.entry, updateGuide]);
 
   const handleEventFeedback = useCallback(() => playFeedback("event"), [playFeedback]);
 
   const selectPrediction = (prediction: PredictionId) => {
     if (pickerCell === null) return;
     playFeedback("tap");
-    setGrid((current) => current.map((value, index) => (index === pickerCell ? prediction : value)));
+    const nextGrid = grid.map((value, index) => (index === pickerCell ? prediction : value));
+    setGrid(nextGrid);
     setPickerCell(null);
+    if (guideStep === "choose") advanceGuide("choose", "fill");
+    else if (guideActive && guideStep === "fill" && nextGrid.every(Boolean)) updateGuide("review");
   };
 
   const startRound = async () => {
     playFeedback("lock");
     if (onchainGame.configured) {
-      if (!onchainGame.entry && !(await onchainGame.enter(grid as PredictionId[], stakeInput))) return;
+      if (!onchainGame.entry) {
+        if (guideActive && guideStep === "sign") updateGuide("accepting");
+        if (!(await onchainGame.enter(grid as PredictionId[], stakeInput))) {
+          if (guideActive) updateGuide("sign");
+          return;
+        }
+        if (guideActive) updateGuide("secured");
+      }
       await onchainGame.refresh();
       setScreen("build");
       return;
@@ -233,6 +308,7 @@ export function GameShell({ roundId }: { roundId?: string }) {
     if (!(await genLayer.lock(grid as PredictionId[]))) return;
     await startMatch();
     setScreen("watch");
+    if (guideActive) updateGuide("complete");
   };
 
   const finishRound = useCallback(() => {
@@ -254,7 +330,7 @@ export function GameShell({ roundId }: { roundId?: string }) {
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
       <section className="phone-shell">
-        <MomentHeader feedbackEnabled={feedbackEnabled} onOpenTutorial={() => { playFeedback("tap"); setShowTutorial(true); }} onToggleFeedback={toggleFeedback} />
+        <MomentHeader feedbackEnabled={feedbackEnabled} onOpenGuide={openGuide} onToggleFeedback={toggleFeedback} />
         <MomentNav />
         <Progress screen={screen} />
 
@@ -263,14 +339,14 @@ export function GameShell({ roundId }: { roundId?: string }) {
             <BuildScreen
               grid={grid}
               complete={completeGrid}
-              onPick={(cell) => { playFeedback("tap"); setPickerCell(cell); }}
-              onQuickFill={() => { playFeedback("confirm"); setGrid(randomGrid()); }}
-              onContinue={() => { playFeedback("confirm"); setScreen("lock"); }}
+              onPick={(cell) => { playFeedback("tap"); setPickerCell(cell); advanceGuide("pick", "choose"); }}
+              onQuickFill={() => { playFeedback("confirm"); setGrid(randomGrid()); advanceGuide("fill", "review"); }}
+              onContinue={() => { playFeedback("confirm"); setScreen("lock"); advanceGuide("review", "stake"); }}
               onchainGame={onchainGame}
             />
           )}
           {screen === "lock" && (
-            <LockScreen grid={grid as PredictionId[]} error={onchainGame.error || genLayer.error || replayError} genLayerConfigured={genLayer.configured} phase={genLayer.phase} busy={onchainGame.busy || genLayer.busy} onchainGame={onchainGame} stakeInput={stakeInput} onStakeInput={setStakeInput} onBack={() => { playFeedback("tap"); setScreen("build"); }} onLock={startRound} />
+            <LockScreen grid={grid as PredictionId[]} error={onchainGame.error || genLayer.error || replayError} genLayerConfigured={genLayer.configured} phase={genLayer.phase} busy={onchainGame.busy || genLayer.busy} onchainGame={onchainGame} stakeInput={stakeInput} onStakeInput={setStakeInput} onBack={() => { playFeedback("tap"); setScreen("build"); }} onStakeReviewed={() => advanceGuide("stake", "sign")} onLock={startRound} />
           )}
           {screen === "watch" && <WatchScreen snapshot={snapshot} fixture={fixture} error={onchainGame.error || genLayer.error || replayError} phase={genLayer.phase} transactionHash={onchainGame.transactionHash || genLayer.transactionHash} busy={onchainGame.busy || genLayer.busy} onchain={onchainGame.configured} onEvent={handleEventFeedback} onContinue={async () => { if (onchainGame.configured) await onchainGame.refresh(); else if (!(await genLayer.resolve(grid as PredictionId[]))) return; playFeedback("confirm"); setScreen("reveal"); }} />}
           {screen === "reveal" && (
@@ -301,40 +377,15 @@ export function GameShell({ roundId }: { roundId?: string }) {
           onClose={() => setPickerCell(null)}
         />
       )}
-      {showTutorial && <FirstPlayTutorial onAdvance={() => playFeedback("tap")} onClose={closeTutorial} />}
+      {guideActive && (
+        <GuidedPlay
+          step={guideStep}
+          onExit={exitGuide}
+          onPause={() => updateGuide("secured", "paused")}
+          onComplete={() => updateGuide("complete", "complete")}
+        />
+      )}
     </main>
-  );
-}
-
-function FirstPlayTutorial({ onAdvance, onClose }: { onAdvance: () => void; onClose: () => void }) {
-  const [step, setStep] = useState(0);
-  const steps = [
-    { icon: Grid3X3, tag: "01 · Build", title: "Fill all nine calls.", copy: "Columns are match windows. Rows are rarity tiers. Every cell needs one prediction." },
-    { icon: LockKeyhole, tag: "02 · Lock", title: "Commit to your calls.", copy: "Lock the grid before kickoff. The finalized signed entry becomes the immutable scoring input." },
-    { icon: Trophy, tag: "03 · Resolve", title: "Let consensus settle the moment.", copy: "GenLayer validators evaluate public evidence; deterministic scoring completes your rows, columns, and diagonals." },
-  ] as const;
-  const current = steps[step];
-  const Icon = current.icon;
-  const last = step === steps.length - 1;
-
-  const next = () => {
-    if (last) return onClose();
-    onAdvance();
-    setStep((value) => value + 1);
-  };
-
-  return (
-    <div className="tutorial-backdrop" role="presentation">
-      <section className="tutorial-card" role="dialog" aria-modal="true" aria-label="How to play Moment Grid">
-        <div className="tutorial-top"><span>First match briefing</span><button type="button" onClick={onClose}>Skip</button></div>
-        <div className="tutorial-visual"><span className="tutorial-orbit" /><div><Icon size={38} /></div></div>
-        <span className="step-label">{current.tag}</span>
-        <h2>{current.title}</h2>
-        <p>{current.copy}</p>
-        <div className="tutorial-dots" aria-label={`Tutorial step ${step + 1} of ${steps.length}`}>{steps.map((_, index) => <i className={index <= step ? "is-active" : ""} key={index} />)}</div>
-        <button className="primary-button" type="button" onClick={next}>{last ? "Start calling" : "Next"}<ChevronRight size={18} /></button>
-      </section>
-    </div>
   );
 }
 
@@ -379,7 +430,7 @@ function BuildScreen({ grid, complete, onPick, onQuickFill, onContinue, onchainG
     <div className="screen-stack">
       <div className="title-row">
         <div><span className="step-label">01 · Build</span><h1>Call the match.</h1></div>
-        {!committed && <button className="text-button" onClick={onQuickFill}><Zap size={13} /> Random fill</button>}
+        {!committed && <button className="text-button" data-guide="random-fill" onClick={onQuickFill}><Zap size={13} /> Random fill</button>}
       </div>
       <p className="lede">Build nine football predictions. Every square is its own loser-funded pari-mutuel pool; rows control stake weight and columns control timing.</p>
       <MatchCard game={onchainGame} />
@@ -387,7 +438,7 @@ function BuildScreen({ grid, complete, onPick, onQuickFill, onContinue, onchainG
       <GridBoard grid={grid} onPick={committed ? undefined : onPick} pools={onchainGame.pools} />
       {committed && <OnchainRoundPanel game={onchainGame} />}
       <div className="privacy-note"><ShieldCheck size={16} /><span>GenLayer resolves registered moments from public evidence; line scoring stays deterministic.</span></div>
-      <button className="primary-button" disabled={!complete} onClick={onContinue}>
+      <button className="primary-button" data-guide={committed ? undefined : "review-grid"} disabled={!complete} onClick={onContinue}>
         {committed ? "Open my committed grid" : complete ? "Review my grid" : `${grid.filter(Boolean).length} / 9 predictions picked`}<ChevronRight size={18} />
       </button>
     </div>
@@ -419,6 +470,7 @@ function GridBoard({ grid, onPick, markedMask = 0, revealed = false, locked = fa
                 }) as CSSProperties}
                 onClick={() => onPick?.(cell)}
                 disabled={!onPick}
+                data-guide={onPick && cell === 0 ? "pick-cell" : undefined}
                 aria-label={`${tier}, ${WINDOW_LABELS[column]}: ${definition?.label ?? "empty"}`}
               >
                 {locked && !revealed ? (
@@ -453,7 +505,7 @@ function ConsensusMeter({ support, tier }: { support: number; tier: number }) {
   );
 }
 
-function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame, stakeInput, onStakeInput, onBack, onLock }: { grid: PredictionId[]; error: string; genLayerConfigured: boolean; phase: GenLayerResolutionPhase; busy: boolean; onchainGame: OnchainGame; stakeInput: string; onStakeInput: (value: string) => void; onBack: () => void; onLock: () => void }) {
+function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame, stakeInput, onStakeInput, onBack, onStakeReviewed, onLock }: { grid: PredictionId[]; error: string; genLayerConfigured: boolean; phase: GenLayerResolutionPhase; busy: boolean; onchainGame: OnchainGame; stakeInput: string; onStakeInput: (value: string) => void; onBack: () => void; onStakeReviewed: () => void; onLock: () => void }) {
   const [confirmed, setConfirmed] = useState(false);
   const minimumStake = onchainGame.round?.minimum_stake ?? MINIMUM_STAKE_WEI;
   const maximumStake = onchainGame.round?.maximum_stake;
@@ -463,6 +515,7 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
   const requestLock = () => {
     if (onchainGame.configured && !onchainGame.entry && !confirmed) {
       setConfirmed(true);
+      onStakeReviewed();
       return;
     }
     onLock();
@@ -498,7 +551,7 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
       {confirmed && !onchainGame.entry && <div className="confirmation-card" role="alert"><strong>Confirm your maximum loss</strong><p>You are committing {stakeInput} testnet GEN to nine transparent pari-mutuel pools. Picks cannot be edited after acceptance.</p></div>}
       {!onchainGame.configured && genLayerConfigured && genLayerResolverConfig.moment && grid.includes(genLayerResolverConfig.moment.prediction_id as PredictionId) && <div className="privacy-note"><ShieldCheck size={16} /><span>{genLayerResolverConfig.moment.moment_statement} is pre-registered on {genLayerResolverConfig.network} · {phase === "READY" ? "ready" : "verified at lock"}.</span></div>}
       {error && <p className="error-message">{error}</p>}
-      <button className="primary-button pulse-button" onClick={requestLock} disabled={busy || (onchainGame.configured && !onchainGame.entry && (!allocation || !v2Ready))}>{busy ? (onchainGame.configured ? `${onchainGame.transactionStage.toLowerCase()}…` : "Checking GenLayer registration…") : onchainGame.entry ? "Entry secured · view position" : onchainGame.configured ? confirmed ? `Confirm & sign ${stakeInput || "0"} GEN` : `Review ${stakeInput || "0"} GEN stake` : "Lock & start replay"} <LockKeyhole size={17} /></button>
+      <button className="primary-button pulse-button" data-guide={onchainGame.configured && !onchainGame.entry && confirmed ? "sign-entry" : "review-stake"} onClick={requestLock} disabled={busy || (onchainGame.configured && !onchainGame.entry && (!allocation || !v2Ready))}>{busy ? (onchainGame.configured ? `${onchainGame.transactionStage.toLowerCase()}…` : "Checking GenLayer registration…") : onchainGame.entry ? "Entry secured · view position" : onchainGame.configured ? confirmed ? `Confirm & sign ${stakeInput || "0"} GEN` : `Review ${stakeInput || "0"} GEN stake` : "Lock & start replay"} <LockKeyhole size={17} /></button>
     </div>
   );
 }
@@ -710,7 +763,7 @@ function OnchainRoundPanel({ game }: { game: OnchainGame; previewJackpotQualifie
     now >= refundAt || (now >= Date.parse(round.lock_at) && round.liquidity_ready === false)
   ));
   return (
-    <section className="onchain-round-card" aria-label={`${game.config.networkLabel} game position`}>
+    <section className="onchain-round-card" data-guide={entry ? "entry-secured" : undefined} aria-label={`${game.config.networkLabel} game position`}>
       <header><span>{game.config.networkLabel} position</span><b>{round?.status ?? "LOADING"}</b></header>
       <dl>
         <div><dt>Your stake</dt><dd>{entry ? `${formatGen(entry.stake_amount)} GEN` : "No entry found"}</dd></div>
@@ -723,7 +776,7 @@ function OnchainRoundPanel({ game }: { game: OnchainGame; previewJackpotQualifie
       {round?.status === "OPEN" && <p>Entries lock {new Date(round.lock_at).toLocaleString()}. Resolution opens {round.resolve_not_before ? new Date(round.resolve_not_before).toLocaleString() : "after the contract migration"}.</p>}
       {round?.status === "SCORING" && <button type="button" onClick={() => void game.process()} disabled={game.busy}>Process jackpot scoring batch</button>}
       {canRefund && <button type="button" onClick={() => void game.activateRefunds()} disabled={game.busy}>Open full refunds</button>}
-      {(round?.status === "SETTLED" || round?.status === "REFUNDING") && canClaim && <button type="button" onClick={() => void game.claim()} disabled={game.busy}>Claim {formatGen(entry!.claimable)} GEN</button>}
+      {(round?.status === "SETTLED" || round?.status === "REFUNDING") && canClaim && <button type="button" data-guide="claim-payout" onClick={() => void game.claim()} disabled={game.busy}>Claim {formatGen(entry!.claimable)} GEN</button>}
       <button className="onchain-refresh" type="button" onClick={() => void game.refresh()} disabled={game.busy}>Refresh chain state</button>
       {game.transactionHash && <p>Transaction {game.transactionHash.slice(0, 10)}…{game.transactionHash.slice(-6)} · {game.transactionStage.toLowerCase()}.</p>}
       {game.transactionStage === "ACCEPTED" && <p role="status">Accepted by Bradbury validators. Your entry is visible now; irreversible finality continues in the background.</p>}
@@ -743,9 +796,9 @@ function PredictionPicker({ cell, selected, onSelect, onClose }: { cell: number;
         <div className="picker-heading"><div><span className="step-label">{TIER_NAMES[tier]} · {WINDOW_LABELS[column]}′</span><h2>Choose your call</h2></div><button onClick={onClose}>×</button></div>
         <p className="picker-privacy">Pool backing is public on-chain. Your grid becomes immutable after the entry transaction finalizes.</p>
         <div className="picker-options">
-          {pool.map((predictionId) => {
+          {pool.map((predictionId, optionIndex) => {
             const definition = PREDICTIONS[predictionId];
-            return <button className={selected === predictionId ? "selected" : ""} key={predictionId} onClick={() => onSelect(predictionId)}><span className={`prediction-swatch tier-${tier}`}><CircleDot size={16} /></span><div><strong>{definition.label}</strong><small>{definition.deadline}</small></div>{selected === predictionId && <Check size={17} />}</button>;
+            return <button className={selected === predictionId ? "selected" : ""} data-guide={optionIndex === 0 ? "prediction-option" : undefined} key={predictionId} onClick={() => onSelect(predictionId)}><span className={`prediction-swatch tier-${tier}`}><CircleDot size={16} /></span><div><strong>{definition.label}</strong><small>{definition.deadline}</small></div>{selected === predictionId && <Check size={17} />}</button>;
           })}
         </div>
       </div>
