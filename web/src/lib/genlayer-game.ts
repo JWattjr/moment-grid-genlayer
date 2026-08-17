@@ -89,13 +89,13 @@ export type GameCellPool = {
 };
 
 type GenLayerClientConfig = NonNullable<Parameters<typeof createClient>[0]>;
-const networkSetting = process.env.NEXT_PUBLIC_GENLAYER_GAME_NETWORK ?? "testnet-bradbury";
+const networkSetting = process.env.NEXT_PUBLIC_GENLAYER_GAME_NETWORK ?? "studionet";
 const networks = {
   localnet: { chain: localnet, connectName: "localnet" as const },
   studionet: { chain: studionet, connectName: "studionet" as const },
   "testnet-bradbury": { chain: testnetBradbury, connectName: "testnetBradbury" as const },
 };
-const selectedNetwork = networks[networkSetting as keyof typeof networks] ?? networks["testnet-bradbury"];
+const selectedNetwork = networks[networkSetting as keyof typeof networks] ?? networks.studionet;
 const contractAddress = process.env.NEXT_PUBLIC_GENLAYER_GAME_ADDRESS ?? "";
 const resolverAddress = process.env.NEXT_PUBLIC_GENLAYER_ROUND_RESOLVER_ADDRESS ?? "";
 const roundId = process.env.NEXT_PUBLIC_GENLAYER_GAME_ROUND_ID ?? "";
@@ -107,6 +107,10 @@ const botAddresses = [
 const formBotAddress = process.env.NEXT_PUBLIC_GENLAYER_FORM_BOT_ADDRESS?.trim().toLowerCase() ?? "";
 const chaosBotAddress = process.env.NEXT_PUBLIC_GENLAYER_CHAOS_BOT_ADDRESS?.trim().toLowerCase() ?? "";
 const endpoint = process.env.NEXT_PUBLIC_GENLAYER_GAME_RPC_URL?.trim() || undefined;
+// Only Bradbury separates validator acceptance from a much later irreversible
+// finality, so only Bradbury copy may tell players that finality is still pending.
+const finalityIsDeferred = networkSetting === "testnet-bradbury";
+const networkLabel = networkSetting === "studionet" ? "StudioNet" : finalityIsDeferred ? "Bradbury testnet" : "Localnet";
 
 export const genLayerGameConfig = {
   contractAddress,
@@ -119,8 +123,15 @@ export const genLayerGameConfig = {
   activeRoundEnabled: isAddress(contractAddress) && isAddress(resolverAddress) && Boolean(roundId),
   testBotAddress: botAddresses[0] ?? "",
   botAddresses,
-  deploymentLabel: networkSetting === "studionet" ? "StudioNet V3" : networkSetting === "testnet-bradbury" ? "Bradbury V3" : "Localnet",
-  networkLabel: networkSetting === "studionet" ? "StudioNet" : networkSetting === "testnet-bradbury" ? "Bradbury testnet" : "Localnet",
+  deploymentLabel: networkSetting === "studionet" ? "StudioNet V3" : finalityIsDeferred ? "Bradbury V3" : "Localnet",
+  networkLabel,
+  validatorLabel: networkSetting === "studionet" ? "StudioNet validators" : finalityIsDeferred ? "Bradbury validators" : "Localnet validators",
+  entryLockNote: finalityIsDeferred
+    ? "Predictions cannot change after the signed entry is accepted. Bradbury finality continues in the background while the registered match and evidence window stay fixed."
+    : `Predictions cannot change after the signed entry is accepted. The registered match and evidence window stay fixed on ${networkLabel}.`,
+  entryAcceptedNote: finalityIsDeferred
+    ? "Accepted by Bradbury validators. Your entry is visible now; irreversible finality continues in the background."
+    : `Accepted by ${networkLabel} validators. Your entry is recorded on the game contract.`,
 };
 
 export function isDisclosedTestBot(address?: string): boolean {
@@ -170,8 +181,9 @@ async function writeFinalized(
   const receipt = await client().waitForTransactionReceipt({
     hash: hash as TransactionHash,
     status: TransactionStatus.FINALIZED,
-    // Bradbury commonly needs around 30 minutes to finalize. Lifecycle writes
-    // must keep waiting instead of presenting a false timeout after 12 minutes.
+    // Bradbury commonly needs around 30 minutes to finalize, and StudioNet is
+    // far quicker. Lifecycle writes must keep waiting for the slowest network
+    // instead of presenting a false timeout after 12 minutes.
     interval: 15_000,
     retries: 240,
   });

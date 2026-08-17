@@ -127,7 +127,17 @@
           "label": "Form Bot",
           "address": "0xdb433ff614bdd1ece21aa97221c3e0a7ecf79c92",
           "strategy": "First registered option in every cell",
-          "moment_ids": [1, 4, 7, 10, 13, 16, 19, 22, 25],
+          "moment_ids": [
+            1,
+            4,
+            7,
+            10,
+            13,
+            16,
+            19,
+            22,
+            25
+          ],
           "stake_wei": "1000000000000000000",
           "entry_transaction": "0x9b0ccf92a6cdad8b610d3ea4616faec83e2f4238d852868c9c9ea3823d0ebf6a",
           "execution": "SUCCESS"
@@ -136,13 +146,36 @@
           "label": "Chaos Bot",
           "address": "0x2c8eb5db1105a85be66badafed88d10cf393cdd8",
           "strategy": "Third registered option in every cell",
-          "moment_ids": [3, 6, 9, 12, 15, 18, 21, 24, 27],
+          "moment_ids": [
+            3,
+            6,
+            9,
+            12,
+            15,
+            18,
+            21,
+            24,
+            27
+          ],
           "stake_wei": "1000000000000000000",
           "entry_transaction": "0x0b47cc083728529bf1f40101e23c3e654a6cc3eecad9cb659c1d9b50b6801bc1",
           "execution": "SUCCESS"
         }
       ]
-    }
+    },
+    "live_read_verification": {
+      "verified_at": "2026-08-17",
+      "method": "Read-only genlayer-js contract reads via web/scripts/verify-studionet-v3.mjs",
+      "game_version_read": "3.0.0",
+      "round_resolver_version_read": "3.0.0",
+      "active_round_status_read": "OPEN",
+      "participant_count_read": 2,
+      "unique_grid_count_read": 2,
+      "minimum_stake_wei_read": "1000000000000000000",
+      "cell_pools_read": 9,
+      "result": "All reads succeeded; the frontend default was switched to this deployment without redeploying contracts."
+    },
+    "frontend_default": true
   },
   "registrations": {
     "epl-2023-05-02-arsenal-chelsea-home-first": "0x409573d07206dd501a29dbdec1c530f1a9d23aa779f7a94a31b085362330a1e6",

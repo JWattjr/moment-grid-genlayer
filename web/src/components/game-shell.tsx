@@ -63,11 +63,10 @@ const HULL_UNITED_FIXTURE: FixtureLabel = { home: "Hull City", away: "Manchester
 const CITY_BOURNEMOUTH_FIXTURE: FixtureLabel = { home: "Manchester City", away: "AFC Bournemouth", homeCode: "MCI", awayCode: "BOU" };
 const NEWCASTLE_LIVERPOOL_FIXTURE: FixtureLabel = { home: "Newcastle United", away: "Liverpool", homeCode: "NEW", awayCode: "LIV" };
 const REGISTERED_FIXTURE: FixtureLabel = { home: "Registered home", away: "Registered away", homeCode: "HOME", awayCode: "AWAY" };
+// Only rounds that actually exist on the configured game contract belong here.
+// The StudioNet V3 deployment currently carries the Arsenal–Coventry round.
 const FEATURED_MATCHES = [
-  { roundId: "epl-2026-08-21-arsenal-coventry-bradbury-v3", fixture: LIVE_FIXTURE, kickoffAt: "2026-08-21T19:00:00Z" },
-  { roundId: "epl-2026-08-22-hull-man-united-bradbury-v3", fixture: HULL_UNITED_FIXTURE, kickoffAt: "2026-08-22T11:30:00Z" },
-  { roundId: "epl-2026-08-23-man-city-bournemouth-bradbury-v3", fixture: CITY_BOURNEMOUTH_FIXTURE, kickoffAt: "2026-08-23T14:00:00Z" },
-  { roundId: "epl-2026-08-23-newcastle-liverpool-bradbury-v3", fixture: NEWCASTLE_LIVERPOOL_FIXTURE, kickoffAt: "2026-08-23T15:30:00Z" },
+  { roundId: "epl-2026-08-21-arsenal-coventry-studionet-v3", fixture: LIVE_FIXTURE, kickoffAt: "2026-08-21T19:00:00Z" },
 ] as const;
 const FIXTURES_BY_ID: Record<string, FixtureLabel> = {
   "epl-2026-08-21-arsenal-coventry-bradbury-v3": LIVE_FIXTURE,
@@ -452,7 +451,7 @@ function BuildScreen({ grid, complete, onPick, onQuickFill, onContinue, onchainG
         {!committed && <button className="text-button" data-guide="random-fill" onClick={onQuickFill}><Zap size={13} /> Random fill</button>}
       </div>
       <p className="lede">Build nine football predictions. Every square is its own loser-funded pari-mutuel pool; rows control stake weight and columns control timing.</p>
-      {onchainGame.configured && <MatchSwitcher selectedRoundId={onchainGame.config.roundId} />}
+      {onchainGame.configured && FEATURED_MATCHES.length > 1 && <MatchSwitcher selectedRoundId={onchainGame.config.roundId} />}
       <MatchCard game={onchainGame} />
       <ResolutionLoop compact />
       <GridBoard grid={grid} onPick={committed ? undefined : onPick} pools={onchainGame.pools} />
@@ -570,7 +569,7 @@ function LockScreen({ grid, error, genLayerConfigured, phase, busy, onchainGame,
     <div className="screen-stack">
       <button className="back-button" onClick={onBack}><ArrowLeft size={16} /> Edit grid</button>
       <div><span className="step-label">02 · Lock</span><h1>Commit to your calls.</h1></div>
-      <p className="lede">{onchainGame.configured ? "Predictions cannot change after the signed entry is accepted. Bradbury finality continues in the background while the registered match and evidence window stay fixed." : "Predictions cannot change after the replay begins. Registered match moments are verified before play."}</p>
+      <p className="lede">{onchainGame.configured ? onchainGame.config.entryLockNote : "Predictions cannot change after the replay begins. Registered match moments are verified before play."}</p>
       <ResolutionJourney stage="locked" />
       {onchainGame.configured ? (
         <div className="stake-card" aria-label="On-chain stake allocation">
@@ -825,7 +824,7 @@ function OnchainRoundPanel({ game }: { game: OnchainGame; previewJackpotQualifie
       {(round?.status === "SETTLED" || round?.status === "REFUNDING") && canClaim && <button type="button" data-guide="claim-payout" onClick={() => void game.claim()} disabled={game.busy}>Claim {formatGen(entry!.claimable)} GEN</button>}
       <button className="onchain-refresh" type="button" onClick={() => void game.refresh()} disabled={game.busy}>Refresh chain state</button>
       {game.transactionHash && <p>Transaction {game.transactionHash.slice(0, 10)}…{game.transactionHash.slice(-6)} · {game.transactionStage.toLowerCase()}.</p>}
-      {game.transactionStage === "ACCEPTED" && <p role="status">Accepted by Bradbury validators. Your entry is visible now; irreversible finality continues in the background.</p>}
+      {game.transactionStage === "ACCEPTED" && <p role="status">{game.config.entryAcceptedNote}</p>}
       {game.error && <p className="error-message">{game.error}</p>}
     </section>
   );

@@ -100,14 +100,12 @@ test("rules explain the one GEN nine-pool economy", async ({ page }) => {
   await expect(page.getByText(/each Rare pool 0\.15/i)).toBeVisible();
 });
 
-test("live Bradbury match switcher opens an untouched round with its own guide", async ({ page }) => {
-  test.skip(process.env.E2E_LIVE_GAME !== "1", "Set E2E_LIVE_GAME=1 to exercise the live Bradbury round list.");
-  const roundId = "epl-2026-08-23-newcastle-liverpool-bradbury-v3";
+test("live StudioNet V3 round opens with its own guide", async ({ page }) => {
+  test.skip(process.env.E2E_LIVE_GAME !== "1", "Set E2E_LIVE_GAME=1 to exercise the live StudioNet V3 round.");
+  const roundId = "epl-2026-08-21-arsenal-coventry-studionet-v3";
   await page.goto(`/?round=${roundId}`);
-  const switcher = page.getByRole("region", { name: "Choose a match" });
-  await expect(switcher).toBeVisible({ timeout: 30_000 });
-  await expect(switcher.getByRole("link")).toHaveCount(4);
-  await expect(switcher.getByRole("link", { name: /NEW–LIV/i })).toHaveAttribute("aria-current", "page");
+  await expect(page.getByText("On-chain round · StudioNet V3")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText(/ARS · Arsenal vs Coventry City · COV/i)).toBeVisible();
   await expect(page.getByRole("heading", { name: "Choose your first square" })).toBeVisible();
 });
 

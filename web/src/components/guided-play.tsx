@@ -2,6 +2,7 @@
 
 import { Check, X } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { genLayerGameConfig } from "@/lib/genlayer-game";
 
 export type GuideStep =
   | "pick"
@@ -68,7 +69,7 @@ const GUIDE_STEPS: Record<GuideStep, GuideDefinition> = {
   secured: {
     target: "entry-secured",
     title: "Your entry is live",
-    copy: "Bradbury accepted your entry. This card will show your stake, result, and anything available to claim.",
+    copy: `${genLayerGameConfig.validatorLabel} accepted your entry. This card will show your stake, result, and anything available to claim.`,
     position: 7,
   },
   claim: {
